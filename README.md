@@ -6,8 +6,12 @@ PLEASE NOTE: Monibot CLI is still under development, visit <https://monibot.io> 
 
 ## Install
 
-    go install github.com/cvilsmeier/moni-cli
+    go install github.com/cvilsmeier/moni-cli/cmd/moni@
 
 ## Usage
 
     $ moni help
+
+## License
+
+MIT license
