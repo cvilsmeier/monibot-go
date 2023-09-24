@@ -19,8 +19,13 @@ import "github.com/cvilsmeier/moni-go/api"
 const userAgent = "my-app/v1.0.0"
 const apiKey = os.Getenv("MONIBOT_API_KEY")    
 conn := api.NewDefaultConn(userAgent, apiKey)
-// use the API
+// ping the API
 err := conn.GetPing()
+if err != nil {
+    log.Fatal(err)
+}
+// reset a watchdog
+err := conn.PostWatchdogReset("9f9f679a44f5f7a0486817ed524c9791")
 if err != nil {
     log.Fatal(err)
 }
