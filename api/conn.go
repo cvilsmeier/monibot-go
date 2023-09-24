@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"io"
 )
 
 // Conn is a Monibot API connection.
@@ -10,7 +11,14 @@ type Conn struct {
 	http Http
 }
 
-// NewConn creates a Conn with a Http implementation.
+// NewDefaultConn creates a Conn with a default Http implementation.
+func NewDefaultConn(userAgent, apiKey string) *Conn {
+	logger := NewLogger(io.Discard, false)
+	http := NewHttp(logger, "https://monibot.io", userAgent, apiKey)
+	return &Conn{http}
+}
+
+// NewConn creates a Conn with a custom Http implementation.
 func NewConn(http Http) *Conn {
 	return &Conn{http}
 }

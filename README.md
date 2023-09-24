@@ -16,13 +16,9 @@ PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for 
 import "github.com/cvilsmeier/moni-go/api"
 
 // init the API
-const verbose = true
-const monibotUrl = "http://monibot.io"
-const userAgent = "acme-app/v1.0.0"
+const userAgent = "my-app/v1.0.0"
 const apiKey = os.Getenv("MONIBOT_API_KEY")    
-logger := api.NewLogger(verbose)
-http := api.NewHttp(logger, monibotUrl, userAgent, apiKey)
-conn := api.NewConn(http)
+conn := api.NewDefaultConn(userAgent, apiKey)
 // use the API
 err := conn.GetPing()
 if err != nil {

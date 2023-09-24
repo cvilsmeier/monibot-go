@@ -75,7 +75,7 @@ func main() {
 		os.Exit(0)
 	}
 	// init the API
-	logger := api.NewLogger(verbose)
+	logger := api.NewLogger(os.Stdout, verbose)
 	http := api.NewHttp(logger, url, "moni/"+version, apiKey)
 	conn := api.NewConn(http)
 	switch command {

@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // Logger prints log messages.
 type Logger interface {
@@ -14,20 +17,21 @@ type Logger interface {
 
 // NewLogger creates a new Logger. If verbose is true,
 // debug output is enabled, otherwise it is discarded.
-func NewLogger(verbose bool) Logger {
-	return &loggerImpl{verbose}
+func NewLogger(w io.Writer, verbose bool) Logger {
+	return &loggerImpl{w, verbose}
 }
 
 type loggerImpl struct {
+	w       io.Writer
 	verbose bool
 }
 
 func (l *loggerImpl) Infof(f string, a ...any) {
-	fmt.Printf(f+"\n", a...)
+	fmt.Fprintf(l.w, f+"\n", a...)
 }
 
 func (l *loggerImpl) Debugf(f string, a ...any) {
 	if l.verbose {
-		fmt.Printf("DEBUG: "+f+"\n", a...)
+		fmt.Fprintf(l.w, "DEBUG: "+f+"\n", a...)
 	}
 }
