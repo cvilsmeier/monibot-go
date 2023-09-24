@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvilsmeier/moni-cli/api"
+	"github.com/cvilsmeier/moni-go/api"
 )
 
 const (
@@ -243,10 +243,9 @@ func usage() {
 	print("        Show this help page.")
 	print("")
 	print("Exit Codes")
-	print("    0   ok")
-	print("    1   error")
-	print("    2   wrong user input")
-	print("")
+	print("    0 ok")
+	print("    1 error")
+	print("    2 wrong user input")
 	print("")
 }
 

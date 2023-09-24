@@ -2,11 +2,18 @@ package api
 
 import "fmt"
 
+// Logger prints log messages.
 type Logger interface {
+
+	// Infof prints a info messages.
 	Infof(f string, a ...any)
+
+	// Debugf prints a (verbose) debug messages.
 	Debugf(f string, a ...any)
 }
 
+// NewLogger creates a new Logger. If verbose is true,
+// debug output is enabled, otherwise it is discarded.
 func NewLogger(verbose bool) Logger {
 	return &loggerImpl{verbose}
 }

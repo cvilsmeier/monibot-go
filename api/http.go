@@ -7,8 +7,15 @@ import (
 	"net/http"
 )
 
+// Http provides HTTP GET and POST methods.
 type Http interface {
+
+	// Get sends a HTTP GET request.
+	// It returns the raw response data and/or an error.
 	Get(path string) ([]byte, error)
+
+	// Post sends a HTTP POST request with optional body data.
+	// It returns the raw response data and/or an error.
 	Post(path string, data []byte) ([]byte, error)
 }
 
@@ -19,7 +26,8 @@ type httpImpl struct {
 	apiKey    string
 }
 
-func NewHttp(logger Logger, monibotUrl, userAgent, apiKey string) *httpImpl {
+// NewHttp creates a new Http implementation.
+func NewHttp(logger Logger, monibotUrl, userAgent, apiKey string) Http {
 	apiUrl := monibotUrl + "/api/"
 	return &httpImpl{logger, apiUrl, userAgent, apiKey}
 }
