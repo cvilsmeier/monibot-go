@@ -6,7 +6,13 @@ PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for 
 
 ## CLI Usage
 
+Build from source, needs <https://go.dev/> installed.
+
     $ go install github.com/cvilsmeier/moni-go/cmd/moni@latest
+
+Or download compiled binary from <https://github.com/cvilsmeier/moni-go/releases>.
+
+Show help page with the following command:
 
     $ moni help
 

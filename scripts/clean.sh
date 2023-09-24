@@ -1,6 +1,9 @@
 #!/bin/sh
 
-if [ -e _dist ]
+if [ ! -f go.mod ]
 then
-    rm -rf _dist
+    echo "go.mod not found, must be in src directory"
+    exit 1
 fi
+
+rm -rf _dist
