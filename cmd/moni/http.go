@@ -65,6 +65,7 @@ func (h *Http) readResponse(resp *http.Response) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read response data: %w", err)
 	}
+	h.debug("%d %s", resp.StatusCode, string(data))
 	if resp.StatusCode < 200 || 299 < resp.StatusCode {
 		return nil, fmt.Errorf("response status %d: %s", resp.StatusCode, string(data))
 	}

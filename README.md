@@ -6,7 +6,7 @@ PLEASE NOTE: Monibot CLI is still under development, visit <https://monibot.io> 
 
 ## Install
 
-    go install github.com/cvilsmeier/moni-cli/cmd/moni@
+    go install github.com/cvilsmeier/moni-cli/cmd/moni@latest
 
 ## Usage
 
