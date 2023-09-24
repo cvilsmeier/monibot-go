@@ -12,23 +12,24 @@ type SleepFunc func(time.Duration)
 // Conn is a Monibot API connection.
 // It's a logical connection, not a physical one.
 type Conn struct {
-	http  Http
-	sleep SleepFunc // nil means "do not sleep"
+	logger Logger
+	http   Http
+	sleep  SleepFunc // nil means "do not sleep"
 }
 
 // NewDefaultConn creates a Conn with a default Http implementation.
 func NewDefaultConn(userAgent, apiKey string) *Conn {
 	logger := NewLogger(io.Discard, false)
 	http := NewHttp(logger, "https://monibot.io", userAgent, apiKey)
-	return NewConn(http, time.Sleep)
+	return NewConn(logger, http, time.Sleep)
 }
 
 // NewConn creates a Conn with a custom Http implementation and sleep function.
-func NewConn(http Http, sleep SleepFunc) *Conn {
+func NewConn(logger Logger, http Http, sleep SleepFunc) *Conn {
 	if sleep == nil {
 		sleep = func(time.Duration) {}
 	}
-	return &Conn{http, sleep}
+	return &Conn{logger, http, sleep}
 }
 
 // GetPing calls the /ping endpoint.
@@ -96,6 +97,7 @@ func (c *Conn) try(f func() error, trials int, delay time.Duration) error {
 	var err error
 	for i := 0; i < trials; i++ {
 		if i > 0 {
+			c.logger.Debugf("will sleep %s, then start trial %d/%d", delay, i+1, trials)
 			c.sleep(delay)
 		}
 		err = f()

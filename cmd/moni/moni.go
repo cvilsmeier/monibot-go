@@ -23,16 +23,12 @@ const (
 	apiKeyFlag    = "apiKey"
 	defaultApiKey = ""
 
-	intervalEnvKey     = "MONIBOT_INTERVAL"
-	intervalFlag       = "interval"
-	defaultIntervalStr = "5m"
-
 	trialsEnvKey     = "MONIBOT_TRIALS"
 	trialsFlag       = "trials"
 	defaultTrialsStr = "3"
 
 	delayEnvKey     = "MONIBOT_DELAY"
-	delayFlag       = "trials"
+	delayFlag       = "delay"
 	defaultDelayStr = "10s"
 
 	verboseEnvKey  = "MONIBOT_VERBOSE"
@@ -53,22 +49,22 @@ func usage() {
 	print("")
 	print("    -%s", urlFlag)
 	print("        Monibot URL, default is %q.", defaultUrl)
+	print("        You can set this also via environment variable %s.", urlEnvKey)
 	print("")
 	print("    -%s", apiKeyFlag)
 	print("        Monibot API Key, default is %q.", defaultApiKey)
 	print("        You can set this also via environment variable %s.", apiKeyEnvKey)
 	print("        You can find your API Key in your profile on https://monibot.io.")
 	print("")
-	print("    -%s", intervalFlag)
-	print("        Machine sampling interval, default is %q.", defaultIntervalStr)
-	print("        This is used for 'sample' command. The minimum allowed value is 5m.")
-	print("")
 	print("    -%s", trialsFlag)
 	print("        Max. HTTP send trials, default is %q.", defaultTrialsStr)
+	print("        You can set this also via environment variable %s.", trialsEnvKey)
 	print("        This is used for 'reset', 'sample', 'inc' and 'set' commands.")
 	print("")
 	print("    -%s", delayFlag)
 	print("        Delay duration between two HTTP send trials, default is %q.", defaultDelayStr)
+	print("        You can set this also via environment variable %s.", delayEnvKey)
+	print("        This is used in conjunction with '-trials' flag.")
 	print("")
 	print("    -%s", verboseFlag)
 	print("        Verbose output, default is %t.", defaultVerbose)
@@ -88,11 +84,12 @@ func usage() {
 	print("    machine <machineId>")
 	print("        Get and print machine info.")
 	print("")
-	print("    sample <machineId>")
+	print("    sample <machineId> <interval>")
 	print("        Send resource usage (cpu/mem/disk) samples for machine.")
 	print("        This command will stay in background. It monitors resource usage")
-	print("        and sends it to monibot every 5 minutes. It works only")
-	print("        on linux.")
+	print("        and sends it to monibot periodically, specified in interval. The")
+	print("        default interval is 5m. Interval may be lower, but serve-side rate")
+	print("        limits may apply. The sample command currently works only on linux.")
 	print("")
 	print("    metric <metricId>")
 	print("        Get and print metric info.")
@@ -131,19 +128,13 @@ func main() {
 		apiKey = defaultApiKey
 	}
 	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
-	// -interval 1m
-	intervalStr := os.Getenv(intervalEnvKey)
-	if intervalStr == "" {
-		intervalStr = defaultIntervalStr
-	}
-	flag.StringVar(&intervalStr, intervalFlag, intervalStr, "")
 	// -trials 3
 	trialsStr := os.Getenv(trialsEnvKey)
 	if trialsStr == "" {
 		trialsStr = defaultTrialsStr
 	}
 	flag.StringVar(&trialsStr, trialsFlag, trialsStr, "")
-	// -delay 1m
+	// -delay 10s
 	delayStr := os.Getenv(delayEnvKey)
 	if delayStr == "" {
 		delayStr = defaultDelayStr
@@ -156,19 +147,28 @@ func main() {
 	// parse flags
 	flag.Usage = usage
 	flag.Parse()
-	interval, err := time.ParseDuration(intervalStr)
-	if err != nil {
-		fatal(2, "invalid interval %q: %s", intervalStr, err)
+	// validate flags
+	if url == "" {
+		fatal(2, "empty url")
+	}
+	if apiKey == "" {
+		fatal(2, "empty apiKey")
 	}
 	trials, err := strconv.Atoi(trialsStr)
 	if err != nil {
 		fatal(2, "invalid trials %q: %s", trialsStr, err)
 	}
+	if trials <= 0 {
+		fatal(2, "trials must be >= 0 but was %d", trials)
+	}
 	delay, err := time.ParseDuration(delayStr)
 	if err != nil {
 		fatal(2, "invalid delay %q: %s", delayStr, err)
 	}
-	// execute command
+	if delay <= 1*time.Second {
+		fatal(2, "delay must be >= 1s but was %s", delay)
+	}
+	// execute non-API commands
 	command := flag.Arg(0)
 	switch command {
 	case "", "help":
@@ -180,8 +180,9 @@ func main() {
 	}
 	// init the API
 	logger := api.NewLogger(os.Stdout, verbose)
-	http := api.NewHttp(logger, url, "moni/"+api.Version, apiKey)
-	conn := api.NewConn(http, time.Sleep)
+	userAgent := "moni/" + api.Version
+	http := api.NewHttp(logger, url, userAgent, apiKey)
+	conn := api.NewConn(logger, http, time.Sleep)
 	switch command {
 	case "ping":
 		// ping
@@ -222,10 +223,21 @@ func main() {
 		}
 		print("%s", string(data))
 	case "sample":
-		// sample <machineId>
+		// sample <machineId> [interval]
 		machineId := flag.Arg(1)
 		if machineId == "" {
 			fatal(2, "empty machineId")
+		}
+		intervalStr := flag.Arg(2)
+		if intervalStr == "" {
+			intervalStr = "5m"
+		}
+		interval, err := time.ParseDuration(intervalStr)
+		if err != nil {
+			fatal(2, "cannot parse interval %q: %s", intervalStr, err)
+		}
+		if interval < 5*time.Second {
+			fatal(2, "interval must be >= 5s but was %s", interval)
 		}
 		if err := sampleMachine(logger, conn, machineId, interval, trials, delay); err != nil {
 			fatal(1, "%s", err)

@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"testing"
 	"time"
 )
@@ -10,7 +11,8 @@ func TestConn(t *testing.T) {
 	// this test uses a fake HTTP implementation
 	http := &fakeHttp{}
 	// create an API connection
-	conn := NewConn(http, nil)
+	logger := NewLogger(io.Discard, false)
+	conn := NewConn(logger, http, nil)
 	// GET ping
 	{
 		http.responses = append(http.responses, dataAndErr{})
