@@ -6,6 +6,13 @@ import (
 
 // assertions (maybe use testify or matryer/is when codebase gets larger)
 
+func assertTrue(t testing.TB, c bool) {
+	if !c {
+		t.Helper()
+		t.Fatalf("want true but have false")
+	}
+}
+
 func assertNil(t testing.TB, have any) {
 	if have != nil {
 		t.Helper()

@@ -7,16 +7,12 @@ import (
 	"net/http"
 )
 
-// Http provides HTTP GET and POST methods.
+// Http provides a HTTP send function.
 type Http interface {
 
-	// Get sends a HTTP GET request.
+	// Send sends a HTTP request.
 	// It returns the raw response data and/or an error.
-	Get(path string) ([]byte, error)
-
-	// Post sends a HTTP POST request with optional body data.
-	// It returns the raw response data and/or an error.
-	Post(path string, data []byte) ([]byte, error)
+	Send(method, path string, body []byte) ([]byte, error)
 }
 
 type httpImpl struct {
@@ -34,48 +30,29 @@ func NewHttp(logger Logger, monibotUrl, userAgent, apiKey string) Http {
 	return &httpImpl{logger, apiUrl, userAgent, apiKey}
 }
 
-func (h *httpImpl) Get(path string) ([]byte, error) {
+// Send sends a HTTP request. It returns the response data and/or an error.
+func (h *httpImpl) Send(method, path string, body []byte) ([]byte, error) {
 	urlpath := h.apiUrl + path
-	h.logger.Debugf("GET %s", urlpath)
-	req, err := http.NewRequest("GET", urlpath, nil)
+	h.logger.Debugf("%s %s", method, urlpath)
+	if len(body) > 0 {
+		h.logger.Debugf("body=%s", string(body))
+	}
+	bodyReader := bytes.NewReader(body)
+	req, err := http.NewRequest(method, urlpath, bodyReader)
 	if err != nil {
-		h.logger.Debugf("GET %s: %s", urlpath, err)
+		h.logger.Debugf("cannot create request: %s", err)
 		return nil, err
+	}
+	if len(body) > 0 {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 	req.Header.Set("User-Agent", h.userAgent)
 	req.Header.Set("Authorization", "Bearer "+h.apiKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		h.logger.Debugf("GET %s: %s", urlpath, err)
+		h.logger.Debugf("%s %s: %s", req.Method, urlpath, err)
 		return nil, err
 	}
-	return h.readResponse(resp)
-}
-
-func (h *httpImpl) Post(path string, data []byte) ([]byte, error) {
-	urlpath := h.apiUrl + path
-	h.logger.Debugf("POST %s", urlpath)
-	if len(data) > 0 {
-		h.logger.Debugf("data=%s", string(data))
-	}
-	dataReader := bytes.NewReader(data)
-	req, err := http.NewRequest("POST", urlpath, dataReader)
-	if err != nil {
-		h.logger.Debugf("POST %s: %s", urlpath, err)
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", h.userAgent)
-	req.Header.Set("Authorization", "Bearer "+h.apiKey)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		h.logger.Debugf("POST %s: %s", urlpath, err)
-		return nil, err
-	}
-	return h.readResponse(resp)
-}
-
-func (h *httpImpl) readResponse(resp *http.Response) ([]byte, error) {
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {

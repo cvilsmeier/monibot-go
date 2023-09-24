@@ -27,154 +27,18 @@ const (
 	intervalFlag       = "interval"
 	defaultIntervalStr = "5m"
 
+	trialsEnvKey     = "MONIBOT_TRIALS"
+	trialsFlag       = "trials"
+	defaultTrialsStr = "3"
+
+	delayEnvKey     = "MONIBOT_DELAY"
+	delayFlag       = "trials"
+	defaultDelayStr = "10s"
+
 	verboseEnvKey  = "MONIBOT_VERBOSE"
 	verboseFlag    = "v"
 	defaultVerbose = false
 )
-
-func main() {
-	// -url https://monibot.io
-	url := os.Getenv(urlEnvKey)
-	if url == "" {
-		url = defaultUrl
-	}
-	flag.StringVar(&url, urlFlag, url, "")
-	// -apiKey 0000000000
-	apiKey := os.Getenv(apiKeyEnvKey)
-	if apiKey == "" {
-		apiKey = defaultApiKey
-	}
-	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
-	// -interval 1m
-	intervalStr := os.Getenv(intervalEnvKey)
-	if intervalStr == "" {
-		intervalStr = defaultIntervalStr
-	}
-	flag.StringVar(&intervalStr, intervalFlag, intervalStr, "")
-	// -v
-	verboseStr := os.Getenv(verboseEnvKey)
-	verbose := verboseStr == "true"
-	flag.BoolVar(&verbose, verboseFlag, verbose, "")
-	// parse flags
-	flag.Usage = usage
-	flag.Parse()
-	interval, err := time.ParseDuration(intervalStr)
-	if err != nil {
-		fatal(2, "invalid interval %q: %s", intervalStr, err)
-	}
-	// execute command
-	command := flag.Arg(0)
-	switch command {
-	case "", "help":
-		usage()
-		os.Exit(0)
-	case "version":
-		print("moni %s", api.Version)
-		os.Exit(0)
-	}
-	// init the API
-	logger := api.NewLogger(os.Stdout, verbose)
-	http := api.NewHttp(logger, url, "moni/"+api.Version, apiKey)
-	conn := api.NewConn(http)
-	switch command {
-	case "ping":
-		// ping
-		err := conn.GetPing()
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-	case "watchdog":
-		// watchdog <watchdogId>
-		watchdogId := flag.Arg(1)
-		if watchdogId == "" {
-			fatal(2, "empty watchdogId")
-		}
-		data, err := conn.GetWatchdog(watchdogId)
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-		print("%s", string(data))
-	case "reset":
-		// reset <watchdogId>
-		watchdogId := flag.Arg(1)
-		if watchdogId == "" {
-			fatal(2, "empty watchdogId")
-		}
-		err := conn.PostWatchdogReset(watchdogId)
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-	case "machine":
-		// machine <machineId>
-		machineId := flag.Arg(1)
-		if machineId == "" {
-			fatal(2, "empty machineId")
-		}
-		data, err := conn.GetMachine(machineId)
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-		print("%s", string(data))
-	case "sample":
-		// sample <machineId>
-		machineId := flag.Arg(1)
-		if machineId == "" {
-			fatal(2, "empty machineId")
-		}
-		if err := sampleMachine(logger, conn, machineId, interval); err != nil {
-			fatal(1, "%s", err)
-		}
-	case "metric":
-		// metric <metricId>
-		metricId := flag.Arg(1)
-		if metricId == "" {
-			fatal(2, "empty metricId")
-		}
-		data, err := conn.GetMetric(metricId)
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-		print("%s", string(data))
-	case "inc":
-		// inc <metricId> <value>
-		metricId := flag.Arg(1)
-		if metricId == "" {
-			fatal(2, "empty metricId")
-		}
-		valueStr := flag.Arg(2)
-		if valueStr == "" {
-			fatal(2, "empty value")
-		}
-		value, err := strconv.ParseInt(valueStr, 10, 64)
-		if err != nil {
-			fatal(2, "cannot parse value %q: %s", valueStr, err)
-		}
-		err = conn.PostMetricInc(metricId, value)
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-	case "set":
-		// inc <metricId> <value>
-		metricId := flag.Arg(1)
-		if metricId == "" {
-			fatal(2, "empty metricId")
-		}
-		valueStr := flag.Arg(2)
-		if valueStr == "" {
-			fatal(2, "empty value")
-		}
-		value, err := strconv.ParseInt(valueStr, 10, 64)
-		if err != nil {
-			fatal(2, "cannot parse value %q: %s", valueStr, err)
-		}
-		err = conn.PostMetricSet(metricId, value)
-		if err != nil {
-			fatal(1, "%s", err)
-		}
-	default:
-		fatal(2, "unknown command %q, run 'moni help'", command)
-	}
-}
 
 func usage() {
 	print("moni %s", api.Version)
@@ -187,19 +51,26 @@ func usage() {
 	print("")
 	print("Flags")
 	print("")
-	print("    -url")
+	print("    -%s", urlFlag)
 	print("        Monibot URL, default is %q.", defaultUrl)
 	print("")
-	print("    -apiKey")
+	print("    -%s", apiKeyFlag)
 	print("        Monibot API Key, default is %q.", defaultApiKey)
 	print("        You can set this also via environment variable %s.", apiKeyEnvKey)
 	print("        You can find your API Key in your profile on https://monibot.io.")
 	print("")
-	print("    -interval")
+	print("    -%s", intervalFlag)
 	print("        Machine sampling interval, default is %q.", defaultIntervalStr)
 	print("        This is used for 'sample' command. The minimum allowed value is 5m.")
 	print("")
-	print("    -v")
+	print("    -%s", trialsFlag)
+	print("        Max. HTTP send trials, default is %q.", defaultTrialsStr)
+	print("        This is used for 'reset', 'sample', 'inc' and 'set' commands.")
+	print("")
+	print("    -%s", delayFlag)
+	print("        Delay duration between two HTTP send trials, default is %q.", defaultDelayStr)
+	print("")
+	print("    -%s", verboseFlag)
 	print("        Verbose output, default is %t.", defaultVerbose)
 	print("        You can set this also via environment variable %s.", verboseEnvKey)
 	print("")
@@ -247,6 +118,170 @@ func usage() {
 	print("")
 }
 
+func main() {
+	// -url https://monibot.io
+	url := os.Getenv(urlEnvKey)
+	if url == "" {
+		url = defaultUrl
+	}
+	flag.StringVar(&url, urlFlag, url, "")
+	// -apiKey 0000000000
+	apiKey := os.Getenv(apiKeyEnvKey)
+	if apiKey == "" {
+		apiKey = defaultApiKey
+	}
+	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
+	// -interval 1m
+	intervalStr := os.Getenv(intervalEnvKey)
+	if intervalStr == "" {
+		intervalStr = defaultIntervalStr
+	}
+	flag.StringVar(&intervalStr, intervalFlag, intervalStr, "")
+	// -trials 3
+	trialsStr := os.Getenv(trialsEnvKey)
+	if trialsStr == "" {
+		trialsStr = defaultTrialsStr
+	}
+	flag.StringVar(&trialsStr, trialsFlag, trialsStr, "")
+	// -delay 1m
+	delayStr := os.Getenv(delayEnvKey)
+	if delayStr == "" {
+		delayStr = defaultDelayStr
+	}
+	flag.StringVar(&delayStr, delayFlag, delayStr, "")
+	// -v
+	verboseStr := os.Getenv(verboseEnvKey)
+	verbose := verboseStr == "true"
+	flag.BoolVar(&verbose, verboseFlag, verbose, "")
+	// parse flags
+	flag.Usage = usage
+	flag.Parse()
+	interval, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		fatal(2, "invalid interval %q: %s", intervalStr, err)
+	}
+	trials, err := strconv.Atoi(trialsStr)
+	if err != nil {
+		fatal(2, "invalid trials %q: %s", trialsStr, err)
+	}
+	delay, err := time.ParseDuration(delayStr)
+	if err != nil {
+		fatal(2, "invalid delay %q: %s", delayStr, err)
+	}
+	// execute command
+	command := flag.Arg(0)
+	switch command {
+	case "", "help":
+		usage()
+		os.Exit(0)
+	case "version":
+		print("moni %s", api.Version)
+		os.Exit(0)
+	}
+	// init the API
+	logger := api.NewLogger(os.Stdout, verbose)
+	http := api.NewHttp(logger, url, "moni/"+api.Version, apiKey)
+	conn := api.NewConn(http, time.Sleep)
+	switch command {
+	case "ping":
+		// ping
+		err := conn.GetPing()
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+	case "watchdog":
+		// watchdog <watchdogId>
+		watchdogId := flag.Arg(1)
+		if watchdogId == "" {
+			fatal(2, "empty watchdogId")
+		}
+		data, err := conn.GetWatchdog(watchdogId)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
+	case "reset":
+		// reset <watchdogId>
+		watchdogId := flag.Arg(1)
+		if watchdogId == "" {
+			fatal(2, "empty watchdogId")
+		}
+		err := conn.PostWatchdogReset(watchdogId, trials, delay)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+	case "machine":
+		// machine <machineId>
+		machineId := flag.Arg(1)
+		if machineId == "" {
+			fatal(2, "empty machineId")
+		}
+		data, err := conn.GetMachine(machineId)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
+	case "sample":
+		// sample <machineId>
+		machineId := flag.Arg(1)
+		if machineId == "" {
+			fatal(2, "empty machineId")
+		}
+		if err := sampleMachine(logger, conn, machineId, interval, trials, delay); err != nil {
+			fatal(1, "%s", err)
+		}
+	case "metric":
+		// metric <metricId>
+		metricId := flag.Arg(1)
+		if metricId == "" {
+			fatal(2, "empty metricId")
+		}
+		data, err := conn.GetMetric(metricId)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
+	case "inc":
+		// inc <metricId> <value>
+		metricId := flag.Arg(1)
+		if metricId == "" {
+			fatal(2, "empty metricId")
+		}
+		valueStr := flag.Arg(2)
+		if valueStr == "" {
+			fatal(2, "empty value")
+		}
+		value, err := strconv.ParseInt(valueStr, 10, 64)
+		if err != nil {
+			fatal(2, "cannot parse value %q: %s", valueStr, err)
+		}
+		err = conn.PostMetricInc(metricId, value, trials, delay)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+	case "set":
+		// inc <metricId> <value>
+		metricId := flag.Arg(1)
+		if metricId == "" {
+			fatal(2, "empty metricId")
+		}
+		valueStr := flag.Arg(2)
+		if valueStr == "" {
+			fatal(2, "empty value")
+		}
+		value, err := strconv.ParseInt(valueStr, 10, 64)
+		if err != nil {
+			fatal(2, "cannot parse value %q: %s", valueStr, err)
+		}
+		err = conn.PostMetricSet(metricId, value, trials, delay)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+	default:
+		fatal(2, "unknown command %q, run 'moni help'", command)
+	}
+}
+
 // print prints a line to stdout.
 func print(f string, a ...any) {
 	fmt.Printf(f+"\n", a...)
@@ -259,7 +294,7 @@ func fatal(exitCode int, f string, a ...any) {
 }
 
 // sampleMachine samples the local machine (cpu/mem/disk) endlessly.
-func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval time.Duration) error {
+func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval time.Duration, trials int, delay time.Duration) error {
 	_, err := conn.GetMachine(machineId)
 	if err != nil {
 		return err
@@ -298,6 +333,8 @@ func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval
 			diffCpuStat.Percent(),
 			memStat.Percent(),
 			diskStat.Percent(),
+			trials,
+			delay,
 		)
 		if err != nil {
 			log.Printf("ERROR cannot PostMachineSample: %s", err)
