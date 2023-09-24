@@ -26,6 +26,8 @@ type httpImpl struct {
 	apiKey    string
 }
 
+var _ Http = (*httpImpl)(nil)
+
 // NewHttp creates a new Http implementation.
 func NewHttp(logger Logger, monibotUrl, userAgent, apiKey string) Http {
 	apiUrl := monibotUrl + "/api/"

@@ -26,6 +26,8 @@ type loggerImpl struct {
 	verbose bool
 }
 
+var _ Logger = (*loggerImpl)(nil)
+
 func (l *loggerImpl) Infof(f string, a ...any) {
 	fmt.Fprintf(l.w, f+"\n", a...)
 }

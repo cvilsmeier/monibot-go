@@ -62,6 +62,8 @@ type fakeHttp struct {
 	responses []dataAndErr
 }
 
+var _ Http = (*fakeHttp)(nil)
+
 func (f *fakeHttp) Get(path string) ([]byte, error) {
 	return f.getOrPost("GET", path, nil)
 }

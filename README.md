@@ -16,8 +16,8 @@ PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for 
 import "github.com/cvilsmeier/moni-go/api"
 
 // init the API
-const userAgent = "my-app/v1.0.0"
-const apiKey = os.Getenv("MONIBOT_API_KEY")    
+userAgent := "my-app/v1.0.0"
+apiKey := os.Getenv("MONIBOT_API_KEY")
 conn := api.NewDefaultConn(userAgent, apiKey)
 // ping the API
 err := conn.GetPing()
@@ -25,7 +25,7 @@ if err != nil {
     log.Fatal(err)
 }
 // reset a watchdog
-err := conn.PostWatchdogReset("9f9f679a44f5f7a0486817ed524c9791")
+err = conn.PostWatchdogReset("9f9f679a44f5f7a0486817ed524c9791")
 if err != nil {
     log.Fatal(err)
 }
