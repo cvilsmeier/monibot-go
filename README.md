@@ -12,6 +12,8 @@ PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for 
 
 ## SDK Usage
 
+    $ go get github.com/cvilsmeier/moni-go/api
+
 ```go
 import "github.com/cvilsmeier/moni-go/api"
 
@@ -31,6 +33,9 @@ if err != nil {
 }
 ```
 
+## Changelog
+
+See CHANGELOG.md
 
 ## License
 

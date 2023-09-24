@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	version = "v0.0.1"
-
 	urlEnvKey  = "MONIBOT_URL"
 	urlFlag    = "url"
 	defaultUrl = "https://monibot.io"
@@ -71,12 +69,12 @@ func main() {
 		usage()
 		os.Exit(0)
 	case "version":
-		print("moni %s", version)
+		print("moni %s", api.Version)
 		os.Exit(0)
 	}
 	// init the API
 	logger := api.NewLogger(os.Stdout, verbose)
-	http := api.NewHttp(logger, url, "moni/"+version, apiKey)
+	http := api.NewHttp(logger, url, "moni/"+api.Version, apiKey)
 	conn := api.NewConn(http)
 	switch command {
 	case "ping":
@@ -179,7 +177,7 @@ func main() {
 }
 
 func usage() {
-	print("moni %s", version)
+	print("moni %s", api.Version)
 	print("")
 	print("Monibot command line tool, see https://monibot.io.")
 	print("")
