@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cvilsmeier/moni-cli/api"
 )
 
 const (
@@ -41,6 +43,9 @@ func main() {
 	flag.StringVar(&url, urlFlag, url, "")
 	// -apiKey 0000000000
 	apiKey := os.Getenv(apiKeyEnvKey)
+	if apiKey == "" {
+		apiKey = defaultApiKey
+	}
 	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
 	// -interval 1m
 	intervalStr := os.Getenv(intervalEnvKey)
@@ -57,7 +62,7 @@ func main() {
 	flag.Parse()
 	interval, err := time.ParseDuration(intervalStr)
 	if err != nil {
-		log.Fatalf("invalid interval %q: %s", intervalStr, err)
+		fatal(2, "invalid interval %q: %s", intervalStr, err)
 	}
 	// execute command
 	command := flag.Arg(0)
@@ -66,210 +71,223 @@ func main() {
 		usage()
 		os.Exit(0)
 	case "version":
-		prt("moni %s", version)
+		print("moni %s", version)
 		os.Exit(0)
 	}
-	// the following commands need http
-	http := NewHttp(url, apiKey, version, verbose)
+	// init the API
+	logger := api.NewLogger(verbose)
+	http := api.NewHttp(logger, url, "moni/"+version, apiKey)
+	conn := api.NewConn(http)
 	switch command {
 	case "ping":
 		// ping
-		if err := runPing(http); err != nil {
-			log.Fatal(err)
+		err := conn.GetPing()
+		if err != nil {
+			fatal(1, "%s", err)
 		}
 	case "watchdog":
 		// watchdog <watchdogId>
 		watchdogId := flag.Arg(1)
-		if err := runWatchdog(http, watchdogId); err != nil {
-			log.Fatal(err)
+		if watchdogId == "" {
+			fatal(2, "empty watchdogId")
 		}
+		data, err := conn.GetWatchdog(watchdogId)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
 	case "reset":
 		// reset <watchdogId>
 		watchdogId := flag.Arg(1)
-		if err := runWatchdogReset(http, watchdogId); err != nil {
-			log.Fatal(err)
+		if watchdogId == "" {
+			fatal(2, "empty watchdogId")
+		}
+		err := conn.PostWatchdogReset(watchdogId)
+		if err != nil {
+			fatal(1, "%s", err)
 		}
 	case "machine":
 		// machine <machineId>
 		machineId := flag.Arg(1)
-		if err := runMachine(http, machineId); err != nil {
-			log.Fatal(err)
+		if machineId == "" {
+			fatal(2, "empty machineId")
 		}
+		data, err := conn.GetMachine(machineId)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
 	case "sample":
 		// sample <machineId>
 		machineId := flag.Arg(1)
-		if err := runMachineSample(http, machineId, interval, verbose); err != nil {
-			log.Fatal(err)
+		if machineId == "" {
+			fatal(2, "empty machineId")
+		}
+		if err := sampleMachine(logger, conn, machineId, interval); err != nil {
+			fatal(1, "%s", err)
 		}
 	case "metric":
 		// metric <metricId>
 		metricId := flag.Arg(1)
-		if err := runMetric(http, metricId); err != nil {
-			log.Fatal(err)
+		if metricId == "" {
+			fatal(2, "empty metricId")
 		}
+		data, err := conn.GetMetric(metricId)
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
 	case "inc":
 		// inc <metricId> <value>
 		metricId := flag.Arg(1)
+		if metricId == "" {
+			fatal(2, "empty metricId")
+		}
 		valueStr := flag.Arg(2)
+		if valueStr == "" {
+			fatal(2, "empty value")
+		}
 		value, err := strconv.ParseInt(valueStr, 10, 64)
 		if err != nil {
-			log.Fatalf("cannot parse value %q: %s", valueStr, err)
+			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
-		if err := runMetricInc(http, metricId, value); err != nil {
-			log.Fatal(err)
+		err = conn.PostMetricInc(metricId, value)
+		if err != nil {
+			fatal(1, "%s", err)
 		}
 	case "set":
-		// set <metricId> <value>
+		// inc <metricId> <value>
 		metricId := flag.Arg(1)
+		if metricId == "" {
+			fatal(2, "empty metricId")
+		}
 		valueStr := flag.Arg(2)
+		if valueStr == "" {
+			fatal(2, "empty value")
+		}
 		value, err := strconv.ParseInt(valueStr, 10, 64)
 		if err != nil {
-			log.Fatalf("cannot parse value %q: %s", valueStr, err)
+			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
-		if err := runMetricSet(http, metricId, value); err != nil {
-			log.Fatal(err)
+		err = conn.PostMetricSet(metricId, value)
+		if err != nil {
+			fatal(1, "%s", err)
 		}
 	default:
-		prt("unknown command %q", command)
-		prt("run 'moni help' to get a list of known commands")
-		os.Exit(2)
+		fatal(2, "unknown command %q, run 'moni help'", command)
 	}
 }
 
 func usage() {
-	prt("moni %s", version)
-	prt("")
-	prt("Monibot command line tool, see https://monibot.io.")
-	prt("")
-	prt("Usage")
-	prt("")
-	prt("    moni [flags] command")
-	prt("")
-	prt("Flags")
-	prt("")
-	prt("    -url")
-	prt("        Monibot URL, default is %q.", defaultUrl)
-	prt("")
-	prt("    -apiKey")
-	prt("        Monibot API Key, default is %q.", defaultApiKey)
-	prt("        You can set this also via environment variable %s.", apiKeyEnvKey)
-	prt("        You can find your API Key in your profile on https://monibot.io.")
-	prt("")
-	prt("    -interval")
-	prt("        Machine sampling interval, default is %q.", defaultIntervalStr)
-	prt("        This is used for 'sample' command. The minimum allowed value is 5m.")
-	prt("")
-	prt("    -v")
-	prt("        Verbose output, default is %t.", defaultVerbose)
-	prt("        You can set this also via environment variable %s.", verboseEnvKey)
-	prt("")
-	prt("Commands")
-	prt("")
-	prt("    ping")
-	prt("        Ping the Monibot API.")
-	prt("")
-	prt("    watchdog <watchdogId>")
-	prt("        Get and print watchdog info.")
-	prt("")
-	prt("    reset <watchdogId>")
-	prt("        Reset a watchdog.")
-	prt("")
-	prt("    machine <machineId>")
-	prt("        Get and print machine info.")
-	prt("")
-	prt("    sample <machineId>")
-	prt("        Send resource usage (cpu/mem/disk) samples for machine.")
-	prt("        This command will stay in background. It monitors resource usage")
-	prt("        and sends it to monibot every 5 minutes. It works only")
-	prt("        on linux.")
-	prt("")
-	prt("    metric <metricId>")
-	prt("        Get and print metric info.")
-	prt("")
-	prt("    inc <metricId> <value>")
-	prt("        Increment a Counter metric. Value must be a non-negative 64-bit")
-	prt("        integer value.")
-	prt("")
-	prt("    set <metricId> <value>")
-	prt("        Set a Gauge metric. Value must be a non-negative 64-bit integer")
-	prt("        value.")
-	prt("")
-	prt("    version")
-	prt("        Show program version.")
-	prt("")
-	prt("    help")
-	prt("        Show this help page.")
-	prt("")
+	print("moni %s", version)
+	print("")
+	print("Monibot command line tool, see https://monibot.io.")
+	print("")
+	print("Usage")
+	print("")
+	print("    moni [flags] command")
+	print("")
+	print("Flags")
+	print("")
+	print("    -url")
+	print("        Monibot URL, default is %q.", defaultUrl)
+	print("")
+	print("    -apiKey")
+	print("        Monibot API Key, default is %q.", defaultApiKey)
+	print("        You can set this also via environment variable %s.", apiKeyEnvKey)
+	print("        You can find your API Key in your profile on https://monibot.io.")
+	print("")
+	print("    -interval")
+	print("        Machine sampling interval, default is %q.", defaultIntervalStr)
+	print("        This is used for 'sample' command. The minimum allowed value is 5m.")
+	print("")
+	print("    -v")
+	print("        Verbose output, default is %t.", defaultVerbose)
+	print("        You can set this also via environment variable %s.", verboseEnvKey)
+	print("")
+	print("Commands")
+	print("")
+	print("    ping")
+	print("        Ping the Monibot API.")
+	print("")
+	print("    watchdog <watchdogId>")
+	print("        Get and print watchdog info.")
+	print("")
+	print("    reset <watchdogId>")
+	print("        Reset a watchdog.")
+	print("")
+	print("    machine <machineId>")
+	print("        Get and print machine info.")
+	print("")
+	print("    sample <machineId>")
+	print("        Send resource usage (cpu/mem/disk) samples for machine.")
+	print("        This command will stay in background. It monitors resource usage")
+	print("        and sends it to monibot every 5 minutes. It works only")
+	print("        on linux.")
+	print("")
+	print("    metric <metricId>")
+	print("        Get and print metric info.")
+	print("")
+	print("    inc <metricId> <value>")
+	print("        Increment a Counter metric. Value must be a non-negative 64-bit")
+	print("        integer value.")
+	print("")
+	print("    set <metricId> <value>")
+	print("        Set a Gauge metric. Value must be a non-negative 64-bit integer")
+	print("        value.")
+	print("")
+	print("    version")
+	print("        Show program version.")
+	print("")
+	print("    help")
+	print("        Show this help page.")
+	print("")
+	print("Exit Codes")
+	print("    0   ok")
+	print("    1   error")
+	print("    2   wrong user input")
+	print("")
+	print("")
 }
 
-// prt prints a line to stdout
-func prt(f string, a ...any) {
+// print prints a line to stdout.
+func print(f string, a ...any) {
 	fmt.Printf(f+"\n", a...)
 }
 
-// debug prints a line to stdout if verbose is true.
-func debug(verbose bool, f string, a ...any) {
-	if verbose {
-		fmt.Printf("DEBUG: "+f+"\n", a...)
-	}
+// fatal prints a message to stdout and exits with exitCode.
+func fatal(exitCode int, f string, a ...any) {
+	fmt.Printf(f+"\n", a...)
+	os.Exit(exitCode)
 }
 
-// commands
-
-func runPing(http *Http) error {
-	_, err := http.Get("ping")
-	return err
-}
-
-func runWatchdog(http *Http, watchdogId string) error {
-	data, err := http.Get("watchdog/" + watchdogId)
+// sampleMachine samples the local machine (cpu/mem/disk) endlessly.
+func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval time.Duration) error {
+	_, err := conn.GetMachine(machineId)
 	if err != nil {
 		return err
 	}
-	prt(string(data))
-	return err
-}
-
-func runWatchdogReset(http *Http, watchdogId string) error {
-	_, err := http.Post("watchdog/"+watchdogId+"/reset", nil)
-	return err
-}
-
-func runMachine(http *Http, machineId string) error {
-	data, err := http.Get("machine/" + machineId)
-	if err != nil {
-		return err
-	}
-	prt(string(data))
-	return err
-}
-
-func runMachineSample(http *Http, machineId string, interval time.Duration, verbose bool) error {
-	_, err := http.Get("machine/" + machineId)
-	if err != nil {
-		return err
-	}
-	lastCpuStat, err := loadCpuStat(verbose)
+	lastCpuStat, err := loadCpuStat(logger)
 	if err != nil {
 		return fmt.Errorf("cannot loadCpuStat: %s", err)
 	}
 	for {
-		debug(verbose, "sleep %v", interval)
+		logger.Debugf("sleep %v", interval)
 		time.Sleep(interval)
 		// stat cpu
-		cpuStat, err := loadCpuStat(verbose)
+		cpuStat, err := loadCpuStat(logger)
 		if err != nil {
 			log.Printf("ERROR: cannot loadCpuStat: %s", err)
 			continue
 		}
 		// stat mem
-		memStat, err := loadMemStat(verbose)
+		memStat, err := loadMemStat(logger)
 		if err != nil {
 			log.Printf("ERROR: cannot loadMemStat: %s", err)
 			continue
 		}
 		// stat disk
-		diskStat, err := loadDiskStat(verbose)
+		diskStat, err := loadDiskStat(logger)
 		if err != nil {
 			log.Printf("ERROR: cannot loadDiskStat: %s", err)
 			continue
@@ -277,54 +295,22 @@ func runMachineSample(http *Http, machineId string, interval time.Duration, verb
 		// POST machine sample
 		diffCpuStat := cpuStat.Minus(lastCpuStat)
 		lastCpuStat = cpuStat
-		body := fmt.Sprintf(
-			"tstamp=%d&cpu=%d&mem=%d&disk=%d",
+		err = conn.PostMachineSample(
+			machineId,
 			time.Now().UnixMilli(),
 			diffCpuStat.Percent(),
 			memStat.Percent(),
 			diskStat.Percent(),
 		)
-		_, err = http.Post("machine/"+machineId+"/sample", []byte(body))
 		if err != nil {
-			log.Printf("ERROR cannot POST machineSampleApi: %s", err)
+			log.Printf("ERROR cannot PostMachineSample: %s", err)
 		}
 	}
 }
 
-func runMetric(http *Http, metricId string) error {
-	data, err := http.Get("metric/" + metricId)
-	if err != nil {
-		return err
-	}
-	prt(string(data))
-	return err
-}
-
-func runMetricInc(http *Http, metricId string, value int64) error {
-	if value == 0 {
-		return nil
-	}
-	if value < 0 {
-		return fmt.Errorf("cannot inc negative value %d", value)
-	}
-	body := fmt.Sprintf("value=%d", value)
-	_, err := http.Post("metric/"+metricId+"/inc", []byte(body))
-	return err
-}
-
-func runMetricSet(http *Http, metricId string, value int64) error {
-	if value < 0 {
-		return fmt.Errorf("cannot set negative value %d", value)
-	}
-	body := fmt.Sprintf("value=%d", value)
-	_, err := http.Post("metric/"+metricId+"/set", []byte(body))
-	return err
-}
-
-// machine sampling
-
-func loadCpuStat(verbose bool) (SampleStat, error) {
-	debug(verbose, "loadCpuStat: read /proc/stat")
+// loadCpuStat loads cpu stat.
+func loadCpuStat(logger api.Logger) (SampleStat, error) {
+	logger.Debugf("loadCpuStat: read /proc/stat")
 	f, err := os.Open("/proc/stat")
 	if err != nil {
 		return SampleStat{}, err
@@ -335,7 +321,7 @@ func loadCpuStat(verbose bool) (SampleStat, error) {
 		line := trimText(sca.Text())
 		after, found := strings.CutPrefix(line, "cpu ")
 		if found {
-			debug(verbose, "loadCpuStat: parse %q", line)
+			logger.Debugf("loadCpuStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 5 {
 				return SampleStat{}, fmt.Errorf("want min 5 tokens in %q but was %d", line, len(toks))
@@ -352,15 +338,15 @@ func loadCpuStat(verbose bool) (SampleStat, error) {
 			}
 			idle := nums[3]
 			used := total - idle
-			debug(verbose, "loadCpuStat: total=%d, used=%d", total, used)
+			logger.Debugf("loadCpuStat: total=%d, used=%d", total, used)
 			return SampleStat{total, used}, nil
 		}
 	}
 	return SampleStat{}, fmt.Errorf("prefix 'cpu ' not found in /proc/stat")
 }
 
-func loadMemStat(verbose bool) (SampleStat, error) {
-	debug(verbose, "loadMemStat: /usr/bin/free -k")
+func loadMemStat(logger api.Logger) (SampleStat, error) {
+	logger.Debugf("loadMemStat: /usr/bin/free -k")
 	text, err := execCommand("/usr/bin/free", "-k")
 	if err != nil {
 		return SampleStat{}, err
@@ -370,7 +356,7 @@ func loadMemStat(verbose bool) (SampleStat, error) {
 		line = trimText(line)
 		after, found := strings.CutPrefix(line, "Mem: ")
 		if found {
-			debug(verbose, "loadMemStat: parse %q", line)
+			logger.Debugf("loadMemStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 3 {
 				return SampleStat{}, fmt.Errorf("want min 3 tokens int %q but was %d", line, len(toks))
@@ -383,22 +369,22 @@ func loadMemStat(verbose bool) (SampleStat, error) {
 			if err != nil {
 				return SampleStat{}, fmt.Errorf("cannot parse toks[1] from %q: %s", line, err)
 			}
-			debug(verbose, "loadMemStat: total=%d, used=%d", total, used)
+			logger.Debugf("loadMemStat: total=%d, used=%d", total, used)
 			return SampleStat{total, used}, nil
 		}
 	}
 	return SampleStat{}, fmt.Errorf("prefix 'Mem: ' not found in output of /usr/bin/free")
 }
 
-func loadDiskStat(verbose bool) (SampleStat, error) {
-	debug(verbose, "loadDiskStat: /usr/bin/df --exclude-type=tmpfs --total --output=source,size,used")
+func loadDiskStat(logger api.Logger) (SampleStat, error) {
+	logger.Debugf("loadDiskStat: /usr/bin/df --exclude-type=tmpfs --total --output=source,size,used")
 	text, _ := execCommand("/usr/bin/df", "--exclude-type=tmpfs", "--total", "--output=source,size,used")
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = trimText(line)
 		after, found := strings.CutPrefix(line, "total ")
 		if found {
-			debug(verbose, "loadDiskStat: parse %q", line)
+			logger.Debugf("loadDiskStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 2 {
 				return SampleStat{}, fmt.Errorf("want 2 toks in %q but has only %d", line, len(toks))
@@ -411,7 +397,7 @@ func loadDiskStat(verbose bool) (SampleStat, error) {
 			if err != nil {
 				return SampleStat{}, fmt.Errorf("parse toks[1] %q from %q: %w", toks[1], line, err)
 			}
-			debug(verbose, "loadDiskStat: size=%d, used=%d", size, used)
+			logger.Debugf("loadDiskStat: size=%d, used=%d", size, used)
 			return SampleStat{size, used}, nil
 		}
 	}
