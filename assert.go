@@ -1,10 +1,10 @@
-package api
+package monibot
 
 import (
 	"testing"
 )
 
-// assertions (maybe use testify or matryer/is when codebase gets larger)
+// assert functions (dont want to bring in testify dependency yet)
 
 func assertTrue(t testing.TB, c bool) {
 	if !c {

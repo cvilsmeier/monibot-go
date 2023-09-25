@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvilsmeier/monibot-go/api"
+	"github.com/cvilsmeier/monibot-go"
 )
 
 const (
@@ -23,13 +23,13 @@ const (
 	apiKeyFlag    = "apiKey"
 	defaultApiKey = ""
 
-	trialsEnvKey     = "MONIBOT_TRIALS"
-	trialsFlag       = "trials"
-	defaultTrialsStr = "3"
+	// trialsEnvKey     = "MONIBOT_TRIALS"
+	// trialsFlag       = "trials"
+	// defaultTrialsStr = "3"
 
-	delayEnvKey     = "MONIBOT_DELAY"
-	delayFlag       = "delay"
-	defaultDelayStr = "10s"
+	// delayEnvKey     = "MONIBOT_DELAY"
+	// delayFlag       = "delay"
+	// defaultDelayStr = "10s"
 
 	verboseEnvKey  = "MONIBOT_VERBOSE"
 	verboseFlag    = "v"
@@ -37,7 +37,7 @@ const (
 )
 
 func usage() {
-	print("moni %s", api.Version)
+	print("moni %s", monibot.Version)
 	print("")
 	print("Monibot command line tool, see https://monibot.io.")
 	print("")
@@ -55,16 +55,6 @@ func usage() {
 	print("        Monibot API Key, default is %q.", defaultApiKey)
 	print("        You can set this also via environment variable %s.", apiKeyEnvKey)
 	print("        You can find your API Key in your profile on https://monibot.io.")
-	print("")
-	print("    -%s", trialsFlag)
-	print("        Max. HTTP send trials, default is %q.", defaultTrialsStr)
-	print("        You can set this also via environment variable %s.", trialsEnvKey)
-	print("        This is used for 'reset', 'sample', 'inc' and 'set' commands.")
-	print("")
-	print("    -%s", delayFlag)
-	print("        Delay duration between two HTTP send trials, default is %q.", defaultDelayStr)
-	print("        You can set this also via environment variable %s.", delayEnvKey)
-	print("        This is used in conjunction with '-trials' flag.")
 	print("")
 	print("    -%s", verboseFlag)
 	print("        Verbose output, default is %t.", defaultVerbose)
@@ -84,12 +74,13 @@ func usage() {
 	print("    machine <machineId>")
 	print("        Get and print machine info.")
 	print("")
-	print("    sample <machineId> <interval>")
+	print("    sample <machineId> [interval]")
 	print("        Send resource usage (cpu/mem/disk) samples for machine.")
 	print("        This command will stay in background. It monitors resource usage")
-	print("        and sends it to monibot periodically, specified in interval. The")
-	print("        default interval is 5m. Interval may be lower, but serve-side rate")
-	print("        limits may apply. The sample command currently works only on linux.")
+	print("        and sends it to monibot periodically, specified in interval.")
+	print("        The default interval is 5m. The interval may be lower, but")
+	print("        serve-side rate limits may apply.")
+	print("        The sample command currently works only on linux.")
 	print("")
 	print("    metric <metricId>")
 	print("        Get and print metric info.")
@@ -128,18 +119,6 @@ func main() {
 		apiKey = defaultApiKey
 	}
 	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
-	// -trials 3
-	trialsStr := os.Getenv(trialsEnvKey)
-	if trialsStr == "" {
-		trialsStr = defaultTrialsStr
-	}
-	flag.StringVar(&trialsStr, trialsFlag, trialsStr, "")
-	// -delay 10s
-	delayStr := os.Getenv(delayEnvKey)
-	if delayStr == "" {
-		delayStr = defaultDelayStr
-	}
-	flag.StringVar(&delayStr, delayFlag, delayStr, "")
 	// -v
 	verboseStr := os.Getenv(verboseEnvKey)
 	verbose := verboseStr == "true"
@@ -154,20 +133,6 @@ func main() {
 	if apiKey == "" {
 		fatal(2, "empty apiKey")
 	}
-	trials, err := strconv.Atoi(trialsStr)
-	if err != nil {
-		fatal(2, "invalid trials %q: %s", trialsStr, err)
-	}
-	if trials <= 0 {
-		fatal(2, "trials must be >= 0 but was %d", trials)
-	}
-	delay, err := time.ParseDuration(delayStr)
-	if err != nil {
-		fatal(2, "invalid delay %q: %s", delayStr, err)
-	}
-	if delay <= 1*time.Second {
-		fatal(2, "delay must be >= 1s but was %s", delay)
-	}
 	// execute non-API commands
 	command := flag.Arg(0)
 	switch command {
@@ -175,14 +140,14 @@ func main() {
 		usage()
 		os.Exit(0)
 	case "version":
-		print("moni %s", api.Version)
+		print("moni %s", monibot.Version)
 		os.Exit(0)
 	}
 	// init the API
-	logger := api.NewLogger(os.Stdout, verbose)
-	userAgent := "moni/" + api.Version
-	http := api.NewHttp(logger, url, userAgent, apiKey)
-	conn := api.NewConn(logger, http, time.Sleep)
+	logger := monibot.NewLogger(os.Stdout)
+	userAgent := "moni/" + monibot.Version
+	sender := monibot.NewSender(logger, url, userAgent, apiKey)
+	conn := monibot.NewApi(logger, sender, time.Sleep)
 	switch command {
 	case "ping":
 		// ping
@@ -204,10 +169,9 @@ func main() {
 	case "reset":
 		// reset <watchdogId>
 		watchdogId := flag.Arg(1)
-		if watchdogId == "" {
-			fatal(2, "empty watchdogId")
-		}
-		err := conn.PostWatchdogReset(watchdogId, trials, delay)
+		err := retry(func() error {
+			return conn.PostWatchdogReset(watchdogId)
+		})
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -239,7 +203,7 @@ func main() {
 		if interval < 5*time.Second {
 			fatal(2, "interval must be >= 5s but was %s", interval)
 		}
-		if err := sampleMachine(logger, conn, machineId, interval, trials, delay); err != nil {
+		if err := sampleMachine(logger, conn, machineId, interval); err != nil {
 			fatal(1, "%s", err)
 		}
 	case "metric":
@@ -267,7 +231,9 @@ func main() {
 		if err != nil {
 			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
-		err = conn.PostMetricInc(metricId, value, trials, delay)
+		err = retry(func() error {
+			return conn.PostMetricInc(metricId, value)
+		})
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -285,7 +251,9 @@ func main() {
 		if err != nil {
 			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
-		err = conn.PostMetricSet(metricId, value, trials, delay)
+		err = retry(func() error {
+			return conn.PostMetricSet(metricId, value)
+		})
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -305,8 +273,22 @@ func fatal(exitCode int, f string, a ...any) {
 	os.Exit(exitCode)
 }
 
-// sampleMachine samples the local machine (cpu/mem/disk) endlessly.
-func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval time.Duration, trials int, delay time.Duration) error {
+func retry(f func() error) error {
+	var err error
+	for i := 0; i < 3; i++ {
+		if i > 0 {
+			time.Sleep(time.Duration(i) * 10 * time.Second)
+		}
+		err = f()
+		if err == nil {
+			return nil
+		}
+	}
+	return err
+}
+
+// sampleMachine samples the local machine (cpu/mem/disk) in an endless loop.
+func sampleMachine(logger monibot.Logger, conn *monibot.Api, machineId string, interval time.Duration) error {
 	_, err := conn.GetMachine(machineId)
 	if err != nil {
 		return err
@@ -316,7 +298,7 @@ func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval
 		return fmt.Errorf("cannot loadCpuStat: %s", err)
 	}
 	for {
-		logger.Debugf("sleep %v", interval)
+		logger.Debug("sleep %v", interval)
 		time.Sleep(interval)
 		// stat cpu
 		cpuStat, err := loadCpuStat(logger)
@@ -339,24 +321,24 @@ func sampleMachine(logger api.Logger, conn *api.Conn, machineId string, interval
 		// POST machine sample
 		diffCpuStat := cpuStat.Minus(lastCpuStat)
 		lastCpuStat = cpuStat
-		err = conn.PostMachineSample(
-			machineId,
-			time.Now().UnixMilli(),
-			diffCpuStat.Percent(),
-			memStat.Percent(),
-			diskStat.Percent(),
-			trials,
-			delay,
-		)
+		err = retry(func() error {
+			return conn.PostMachineSample(
+				machineId,
+				time.Now().UnixMilli(),
+				diffCpuStat.Percent(),
+				memStat.Percent(),
+				diskStat.Percent(),
+			)
+		})
 		if err != nil {
 			log.Printf("ERROR cannot PostMachineSample: %s", err)
 		}
 	}
 }
 
-// loadCpuStat loads cpu stat.
-func loadCpuStat(logger api.Logger) (SampleStat, error) {
-	logger.Debugf("loadCpuStat: read /proc/stat")
+// loadCpuStat loads cpu usage stat from /proc/stat.
+func loadCpuStat(logger monibot.Logger) (SampleStat, error) {
+	logger.Debug("loadCpuStat: read /proc/stat")
 	f, err := os.Open("/proc/stat")
 	if err != nil {
 		return SampleStat{}, err
@@ -367,7 +349,7 @@ func loadCpuStat(logger api.Logger) (SampleStat, error) {
 		line := trimText(sca.Text())
 		after, found := strings.CutPrefix(line, "cpu ")
 		if found {
-			logger.Debugf("loadCpuStat: parse %q", line)
+			logger.Debug("loadCpuStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 5 {
 				return SampleStat{}, fmt.Errorf("want min 5 tokens in %q but was %d", line, len(toks))
@@ -384,15 +366,16 @@ func loadCpuStat(logger api.Logger) (SampleStat, error) {
 			}
 			idle := nums[3]
 			used := total - idle
-			logger.Debugf("loadCpuStat: total=%d, used=%d", total, used)
+			logger.Debug("loadCpuStat: total=%d, used=%d", total, used)
 			return SampleStat{total, used}, nil
 		}
 	}
 	return SampleStat{}, fmt.Errorf("prefix 'cpu ' not found in /proc/stat")
 }
 
-func loadMemStat(logger api.Logger) (SampleStat, error) {
-	logger.Debugf("loadMemStat: /usr/bin/free -k")
+// loadMemStat uses /usr/bin/free to load mem usage stat.
+func loadMemStat(logger monibot.Logger) (SampleStat, error) {
+	logger.Debug("loadMemStat: /usr/bin/free -k")
 	text, err := execCommand("/usr/bin/free", "-k")
 	if err != nil {
 		return SampleStat{}, err
@@ -402,7 +385,7 @@ func loadMemStat(logger api.Logger) (SampleStat, error) {
 		line = trimText(line)
 		after, found := strings.CutPrefix(line, "Mem: ")
 		if found {
-			logger.Debugf("loadMemStat: parse %q", line)
+			logger.Debug("loadMemStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 3 {
 				return SampleStat{}, fmt.Errorf("want min 3 tokens int %q but was %d", line, len(toks))
@@ -415,22 +398,23 @@ func loadMemStat(logger api.Logger) (SampleStat, error) {
 			if err != nil {
 				return SampleStat{}, fmt.Errorf("cannot parse toks[1] from %q: %s", line, err)
 			}
-			logger.Debugf("loadMemStat: total=%d, used=%d", total, used)
+			logger.Debug("loadMemStat: total=%d, used=%d", total, used)
 			return SampleStat{total, used}, nil
 		}
 	}
 	return SampleStat{}, fmt.Errorf("prefix 'Mem: ' not found in output of /usr/bin/free")
 }
 
-func loadDiskStat(logger api.Logger) (SampleStat, error) {
-	logger.Debugf("loadDiskStat: /usr/bin/df --exclude-type=tmpfs --total --output=source,size,used")
+// loadMemStat uses /usr/bin/df to load disk usage stat.
+func loadDiskStat(logger monibot.Logger) (SampleStat, error) {
+	logger.Debug("loadDiskStat: /usr/bin/df --exclude-type=tmpfs --total --output=source,size,used")
 	text, _ := execCommand("/usr/bin/df", "--exclude-type=tmpfs", "--total", "--output=source,size,used")
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = trimText(line)
 		after, found := strings.CutPrefix(line, "total ")
 		if found {
-			logger.Debugf("loadDiskStat: parse %q", line)
+			logger.Debug("loadDiskStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 2 {
 				return SampleStat{}, fmt.Errorf("want 2 toks in %q but has only %d", line, len(toks))
@@ -443,7 +427,7 @@ func loadDiskStat(logger api.Logger) (SampleStat, error) {
 			if err != nil {
 				return SampleStat{}, fmt.Errorf("parse toks[1] %q from %q: %w", toks[1], line, err)
 			}
-			logger.Debugf("loadDiskStat: size=%d, used=%d", size, used)
+			logger.Debug("loadDiskStat: size=%d, used=%d", size, used)
 			return SampleStat{size, used}, nil
 		}
 	}

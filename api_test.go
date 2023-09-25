@@ -1,18 +1,20 @@
-package api
+package monibot
 
 import (
 	"fmt"
-	"io"
+	"log"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestConn(t *testing.T) {
-	// this test uses a fake HTTP implementation
-	http := &fakeHttp{}
+	// this test uses a fake HTTP sender
+	http := &fakeSender{}
 	// create an API connection
-	logger := NewLogger(io.Discard, false)
-	conn := NewConn(logger, http, nil)
+	logger := NewLogger(nil)
+	sleep := func(time.Duration) {}
+	conn := NewApi(logger, http, sleep)
 	// GET ping
 	{
 		http.responses = append(http.responses, dataAndErr{})
@@ -38,38 +40,53 @@ func TestConn(t *testing.T) {
 		http.requests = nil
 		http.responses = append(http.responses, dataAndErr{})
 		tstamp := time.Date(2023, 9, 1, 10, 0, 0, 0, time.Local)
-		err := conn.PostMachineSample("00000001", tstamp.UnixMilli(), 12, 13, 14, 1, 0)
+		err := conn.PostMachineSample("00000001", tstamp.UnixMilli(), 12, 13, 14)
 		assertNil(t, err)
 		assertEq(t, 1, len(http.requests))
 		assertEq(t, "POST machine/00000001/sample tstamp=1693555200000&cpu=12&mem=13&disk=14", http.requests[0])
 		assertEq(t, 0, len(http.responses))
 	}
-	// POST metric/00000001/inc (with 3 trials)
+	// POST metric/00000001/inc
 	{
 		http.requests = nil
-		http.responses = append(http.responses, dataAndErr{nil, fmt.Errorf("error 1")})
-		http.responses = append(http.responses, dataAndErr{nil, fmt.Errorf("error 2")})
-		http.responses = append(http.responses, dataAndErr{nil, fmt.Errorf("error 3")})
-		err := conn.PostMetricInc("00000001", 42, 3, 10*time.Second)
-		assertEq(t, "error 3", err.Error())
-		assertEq(t, 3, len(http.requests))
+		http.responses = append(http.responses, dataAndErr{nil, fmt.Errorf("connect timeout")})
+		err := conn.PostMetricInc("00000001", 42)
+		assertEq(t, "connect timeout", err.Error())
+		assertEq(t, 1, len(http.requests))
 		assertEq(t, "POST metric/00000001/inc value=42", http.requests[0])
-		assertEq(t, "POST metric/00000001/inc value=42", http.requests[1])
-		assertEq(t, "POST metric/00000001/inc value=42", http.requests[2])
 		assertEq(t, 0, len(http.responses))
+	}
+}
+
+// This code is only here to be copied into README.md
+func DemoForReadme() {
+	// import "github.com/cvilsmeier/monibot-go"
+	// init api
+	userAgent := "my-app/v1.0.0"
+	apiKey := os.Getenv("MONIBOT_API_KEY")
+	api := NewDefaultApi(userAgent, apiKey)
+	// ping the api
+	err := api.GetPing()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// reset a watchdog
+	err = api.PostWatchdogReset("000000000000001")
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
 // fake http
 
-type fakeHttp struct {
+type fakeSender struct {
 	requests  []string
 	responses []dataAndErr
 }
 
-var _ Http = (*fakeHttp)(nil)
+var _ Sender = (*fakeSender)(nil)
 
-func (f *fakeHttp) Send(method, path string, data []byte) ([]byte, error) {
+func (f *fakeSender) Send(method, path string, data []byte) ([]byte, error) {
 	req := fmt.Sprintf("%s %s", method, path)
 	if len(data) > 0 {
 		req += fmt.Sprintf(" %s", string(data))
