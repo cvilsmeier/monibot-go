@@ -31,9 +31,7 @@ if err != nil {
     log.Fatal(err)
 }
 // reset a watchdog
-trials := 3
-delay := 10 * time.Second
-err = api.PostWatchdogReset("000000000000001", trials, delay)
+err = api.PostWatchdogReset("000000000000001")
 if err != nil {
     log.Fatal(err)
 }
