@@ -1,4 +1,4 @@
-# moni-go
+# monibot-go
 
 A Go SDK and CLI for <https://monibot.io>.
 

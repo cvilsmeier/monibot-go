@@ -12,7 +12,6 @@ mkdir _dist
 echo "go build ./cmd/moni"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o _dist ./cmd/moni
 
-VERSION="v0.0.0"
-TARFILE="moni-$VERSION-linux-amd64.tar.gz"
+TARFILE="moni-linux-amd64.tar.gz"
 echo "tar $TARFILE"
 tar -czf _dist/$TARFILE README.md CHANGELOG.md -C _dist moni

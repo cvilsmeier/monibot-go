@@ -1,3 +1,3 @@
-module github.com/cvilsmeier/moni-go
+module github.com/cvilsmeier/monibot-go
 
-go 1.21.1
+go 1.20

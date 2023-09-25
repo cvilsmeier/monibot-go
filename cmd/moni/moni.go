@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvilsmeier/moni-go/api"
+	"github.com/cvilsmeier/monibot-go/api"
 )
 
 const (
