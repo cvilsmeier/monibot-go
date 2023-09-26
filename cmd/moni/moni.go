@@ -10,7 +10,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -115,6 +114,7 @@ func usage() {
 }
 
 func main() {
+	log.SetOutput(os.Stdout)
 	// -url https://monibot.io
 	url := os.Getenv(urlEnvKey)
 	if url == "" {
@@ -152,11 +152,10 @@ func main() {
 		fatal(2, "empty apiKey")
 	}
 	// init the API
-	var loggerWriter io.Writer
+	logger := monibot.NewDiscardLogger()
 	if verbose {
-		loggerWriter = os.Stdout
+		logger = monibot.NewDefaultLogger()
 	}
-	logger := monibot.NewLogger(loggerWriter)
 	userAgent := "moni/" + monibot.Version
 	sender := monibot.NewSender(logger, url, userAgent, apiKey)
 	api := monibot.NewApi(logger, sender)

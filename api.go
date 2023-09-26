@@ -2,7 +2,6 @@ package monibot
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -15,7 +14,7 @@ type Api struct {
 // NewDefaultApi creates an Api with default implementations.
 // This should be suited for most use cases.
 func NewDefaultApi(userAgent, apiKey string) *Api {
-	logger := NewLogger(io.Discard)
+	logger := NewDefaultLogger()
 	sender := NewSender(logger, "https://monibot.io", userAgent, apiKey)
 	return NewApi(logger, sender)
 }

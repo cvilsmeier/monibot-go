@@ -63,7 +63,11 @@ func (x *senderImpl) Send(method, path string, body []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read response data: %w", err)
 	}
-	x.logger.Debug("%d %s", resp.StatusCode, string(data))
+	if len(data) > 256 {
+		x.logger.Debug("%d (%d bytes) %s", resp.StatusCode, len(data), string(data)[:256]+"...")
+	} else {
+		x.logger.Debug("%d (%d bytes) %s", resp.StatusCode, len(data), string(data))
+	}
 	if resp.StatusCode < 200 || 299 < resp.StatusCode {
 		return nil, fmt.Errorf("response status %d: %s", resp.StatusCode, string(data))
 	}

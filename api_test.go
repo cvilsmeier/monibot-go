@@ -2,7 +2,6 @@ package monibot
 
 import (
 	"fmt"
-	"io"
 	"testing"
 	"time"
 )
@@ -11,7 +10,7 @@ func TestApi(t *testing.T) {
 	// this test uses a fake HTTP sender
 	http := &fakeSender{}
 	// create Api
-	logger := NewLogger(io.Discard)
+	logger := NewDiscardLogger()
 	api := NewApi(logger, http)
 	// GET ping
 	{

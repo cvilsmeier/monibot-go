@@ -1,8 +1,7 @@
 package monibot
 
 import (
-	"fmt"
-	"io"
+	"log"
 )
 
 // A Logger prints debug messages.
@@ -13,22 +12,29 @@ type Logger interface {
 	Debug(f string, a ...any)
 }
 
-// NewLogger creates a new Logger that writes to w.
-func NewLogger(w io.Writer) Logger {
-	if w == nil {
-		w = io.Discard
-	}
-	return &loggerImpl{w}
+// NewDefaultLogger creates a new Logger that logs to go log package.
+func NewDefaultLogger() Logger {
+	return &defaultLogger{}
 }
 
-type loggerImpl struct {
-	w io.Writer
+type defaultLogger struct {
 }
 
-var _ Logger = (*loggerImpl)(nil)
+var _ Logger = (*defaultLogger)(nil)
 
-func (x *loggerImpl) Debug(f string, a ...any) {
-	if x.w != nil {
-		fmt.Fprintf(x.w, "DEBUG: "+f+"\n", a...)
-	}
+func (x *defaultLogger) Debug(f string, a ...any) {
+	log.Printf("DEBUG: "+f+"\n", a...)
+}
+
+// NewDiscardLogger creates a new Logger that discards all output.
+func NewDiscardLogger() Logger {
+	return &discardLogger{}
+}
+
+type discardLogger struct {
+}
+
+var _ Logger = (*discardLogger)(nil)
+
+func (x *discardLogger) Debug(f string, a ...any) {
 }
