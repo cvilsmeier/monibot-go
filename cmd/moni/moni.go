@@ -23,14 +23,6 @@ const (
 	apiKeyFlag    = "apiKey"
 	defaultApiKey = ""
 
-	// trialsEnvKey     = "MONIBOT_TRIALS"
-	// trialsFlag       = "trials"
-	// defaultTrialsStr = "3"
-
-	// delayEnvKey     = "MONIBOT_DELAY"
-	// delayFlag       = "delay"
-	// defaultDelayStr = "10s"
-
 	verboseEnvKey  = "MONIBOT_VERBOSE"
 	verboseFlag    = "v"
 	defaultVerbose = false
@@ -58,7 +50,7 @@ func usage() {
 	print("")
 	print("    -%s", verboseFlag)
 	print("        Verbose output, default is %t.", defaultVerbose)
-	print("        You can set this also via environment variable %s.", verboseEnvKey)
+	print("        You can set this also via environment variable %s ('true' or 'false').", verboseEnvKey)
 	print("")
 	print("Commands")
 	print("")
@@ -86,12 +78,12 @@ func usage() {
 	print("        Get and print metric info.")
 	print("")
 	print("    inc <metricId> <value>")
-	print("        Increment a Counter metric. Value must be a non-negative 64-bit")
-	print("        integer value.")
+	print("        Increment a Counter metric.")
+	print("        Value must be a non-negative 64-bit integer value.")
 	print("")
 	print("    set <metricId> <value>")
-	print("        Set a Gauge metric. Value must be a non-negative 64-bit integer")
-	print("        value.")
+	print("        Set a Gauge metric.")
+	print("        Value must be a non-negative 64-bit integer value.")
 	print("")
 	print("    version")
 	print("        Show program version.")
@@ -147,11 +139,11 @@ func main() {
 	logger := monibot.NewLogger(os.Stdout)
 	userAgent := "moni/" + monibot.Version
 	sender := monibot.NewSender(logger, url, userAgent, apiKey)
-	conn := monibot.NewApi(logger, sender, time.Sleep)
+	api := monibot.NewApi(logger, sender, time.Sleep)
 	switch command {
 	case "ping":
 		// ping
-		err := conn.GetPing()
+		err := api.GetPing()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -161,7 +153,7 @@ func main() {
 		if watchdogId == "" {
 			fatal(2, "empty watchdogId")
 		}
-		data, err := conn.GetWatchdog(watchdogId)
+		data, err := api.GetWatchdog(watchdogId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -170,7 +162,7 @@ func main() {
 		// reset <watchdogId>
 		watchdogId := flag.Arg(1)
 		err := retry(func() error {
-			return conn.PostWatchdogReset(watchdogId)
+			return api.PostWatchdogReset(watchdogId)
 		})
 		if err != nil {
 			fatal(1, "%s", err)
@@ -181,7 +173,7 @@ func main() {
 		if machineId == "" {
 			fatal(2, "empty machineId")
 		}
-		data, err := conn.GetMachine(machineId)
+		data, err := api.GetMachine(machineId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -203,7 +195,7 @@ func main() {
 		if interval < 5*time.Second {
 			fatal(2, "interval must be >= 5s but was %s", interval)
 		}
-		if err := sampleMachine(logger, conn, machineId, interval); err != nil {
+		if err := sampleMachine(logger, api, machineId, interval); err != nil {
 			fatal(1, "%s", err)
 		}
 	case "metric":
@@ -212,7 +204,7 @@ func main() {
 		if metricId == "" {
 			fatal(2, "empty metricId")
 		}
-		data, err := conn.GetMetric(metricId)
+		data, err := api.GetMetric(metricId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -232,7 +224,7 @@ func main() {
 			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
 		err = retry(func() error {
-			return conn.PostMetricInc(metricId, value)
+			return api.PostMetricInc(metricId, value)
 		})
 		if err != nil {
 			fatal(1, "%s", err)
@@ -252,7 +244,7 @@ func main() {
 			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
 		err = retry(func() error {
-			return conn.PostMetricSet(metricId, value)
+			return api.PostMetricSet(metricId, value)
 		})
 		if err != nil {
 			fatal(1, "%s", err)
@@ -288,8 +280,8 @@ func retry(f func() error) error {
 }
 
 // sampleMachine samples the local machine (cpu/mem/disk) in an endless loop.
-func sampleMachine(logger monibot.Logger, conn *monibot.Api, machineId string, interval time.Duration) error {
-	_, err := conn.GetMachine(machineId)
+func sampleMachine(logger monibot.Logger, api *monibot.Api, machineId string, interval time.Duration) error {
+	_, err := api.GetMachine(machineId)
 	if err != nil {
 		return err
 	}
@@ -319,15 +311,15 @@ func sampleMachine(logger monibot.Logger, conn *monibot.Api, machineId string, i
 			continue
 		}
 		// POST machine sample
-		diffCpuStat := cpuStat.Minus(lastCpuStat)
+		diffCpuStat := cpuStat.minus(lastCpuStat)
 		lastCpuStat = cpuStat
 		err = retry(func() error {
-			return conn.PostMachineSample(
+			return api.PostMachineSample(
 				machineId,
 				time.Now().UnixMilli(),
-				diffCpuStat.Percent(),
-				memStat.Percent(),
-				diskStat.Percent(),
+				diffCpuStat.percent(),
+				memStat.percent(),
+				diskStat.percent(),
 			)
 		})
 		if err != nil {
@@ -337,11 +329,11 @@ func sampleMachine(logger monibot.Logger, conn *monibot.Api, machineId string, i
 }
 
 // loadCpuStat loads cpu usage stat from /proc/stat.
-func loadCpuStat(logger monibot.Logger) (SampleStat, error) {
+func loadCpuStat(logger monibot.Logger) (sampleStat, error) {
 	logger.Debug("loadCpuStat: read /proc/stat")
 	f, err := os.Open("/proc/stat")
 	if err != nil {
-		return SampleStat{}, err
+		return sampleStat{}, err
 	}
 	defer f.Close()
 	sca := bufio.NewScanner(f)
@@ -352,14 +344,14 @@ func loadCpuStat(logger monibot.Logger) (SampleStat, error) {
 			logger.Debug("loadCpuStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 5 {
-				return SampleStat{}, fmt.Errorf("want min 5 tokens in %q but was %d", line, len(toks))
+				return sampleStat{}, fmt.Errorf("want min 5 tokens in %q but was %d", line, len(toks))
 			}
 			nums := make([]int64, len(toks))
 			var total int64
 			for i := range toks {
 				n, err := strconv.ParseInt(toks[i], 10, 64)
 				if err != nil {
-					return SampleStat{}, fmt.Errorf("cannot parse toks[%d] %q from line %q: %s", i, toks[i], line, err)
+					return sampleStat{}, fmt.Errorf("cannot parse toks[%d] %q from line %q: %s", i, toks[i], line, err)
 				}
 				nums[i] = n
 				total += n
@@ -367,18 +359,18 @@ func loadCpuStat(logger monibot.Logger) (SampleStat, error) {
 			idle := nums[3]
 			used := total - idle
 			logger.Debug("loadCpuStat: total=%d, used=%d", total, used)
-			return SampleStat{total, used}, nil
+			return sampleStat{total, used}, nil
 		}
 	}
-	return SampleStat{}, fmt.Errorf("prefix 'cpu ' not found in /proc/stat")
+	return sampleStat{}, fmt.Errorf("prefix 'cpu ' not found in /proc/stat")
 }
 
 // loadMemStat uses /usr/bin/free to load mem usage stat.
-func loadMemStat(logger monibot.Logger) (SampleStat, error) {
+func loadMemStat(logger monibot.Logger) (sampleStat, error) {
 	logger.Debug("loadMemStat: /usr/bin/free -k")
 	text, err := execCommand("/usr/bin/free", "-k")
 	if err != nil {
-		return SampleStat{}, err
+		return sampleStat{}, err
 	}
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
@@ -388,25 +380,25 @@ func loadMemStat(logger monibot.Logger) (SampleStat, error) {
 			logger.Debug("loadMemStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 3 {
-				return SampleStat{}, fmt.Errorf("want min 3 tokens int %q but was %d", line, len(toks))
+				return sampleStat{}, fmt.Errorf("want min 3 tokens int %q but was %d", line, len(toks))
 			}
 			total, err := strconv.ParseInt(toks[0], 10, 64)
 			if err != nil {
-				return SampleStat{}, fmt.Errorf("cannot parse toks[0] from %q: %s", line, err)
+				return sampleStat{}, fmt.Errorf("cannot parse toks[0] from %q: %s", line, err)
 			}
 			used, err := strconv.ParseInt(toks[1], 10, 64)
 			if err != nil {
-				return SampleStat{}, fmt.Errorf("cannot parse toks[1] from %q: %s", line, err)
+				return sampleStat{}, fmt.Errorf("cannot parse toks[1] from %q: %s", line, err)
 			}
 			logger.Debug("loadMemStat: total=%d, used=%d", total, used)
-			return SampleStat{total, used}, nil
+			return sampleStat{total, used}, nil
 		}
 	}
-	return SampleStat{}, fmt.Errorf("prefix 'Mem: ' not found in output of /usr/bin/free")
+	return sampleStat{}, fmt.Errorf("prefix 'Mem: ' not found in output of /usr/bin/free")
 }
 
 // loadMemStat uses /usr/bin/df to load disk usage stat.
-func loadDiskStat(logger monibot.Logger) (SampleStat, error) {
+func loadDiskStat(logger monibot.Logger) (sampleStat, error) {
 	logger.Debug("loadDiskStat: /usr/bin/df --exclude-type=tmpfs --total --output=source,size,used")
 	text, _ := execCommand("/usr/bin/df", "--exclude-type=tmpfs", "--total", "--output=source,size,used")
 	lines := strings.Split(text, "\n")
@@ -417,23 +409,24 @@ func loadDiskStat(logger monibot.Logger) (SampleStat, error) {
 			logger.Debug("loadDiskStat: parse %q", line)
 			toks := strings.Split(after, " ")
 			if len(toks) < 2 {
-				return SampleStat{}, fmt.Errorf("want 2 toks in %q but has only %d", line, len(toks))
+				return sampleStat{}, fmt.Errorf("want 2 toks in %q but has only %d", line, len(toks))
 			}
 			size, err := strconv.ParseInt(toks[0], 10, 64)
 			if err != nil {
-				return SampleStat{}, fmt.Errorf("parse toks[0] %q from %q: %w", toks[0], line, err)
+				return sampleStat{}, fmt.Errorf("parse toks[0] %q from %q: %w", toks[0], line, err)
 			}
 			used, err := strconv.ParseInt(toks[1], 10, 64)
 			if err != nil {
-				return SampleStat{}, fmt.Errorf("parse toks[1] %q from %q: %w", toks[1], line, err)
+				return sampleStat{}, fmt.Errorf("parse toks[1] %q from %q: %w", toks[1], line, err)
 			}
 			logger.Debug("loadDiskStat: size=%d, used=%d", size, used)
-			return SampleStat{size, used}, nil
+			return sampleStat{size, used}, nil
 		}
 	}
-	return SampleStat{}, fmt.Errorf("'total' line not found in df output")
+	return sampleStat{}, fmt.Errorf("'total' line not found in df output")
 }
 
+// execCommand executes an external binary.
 func execCommand(name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	cmd.WaitDelay = 10 * time.Second
@@ -444,6 +437,7 @@ func execCommand(name string, args ...string) (string, error) {
 	return string(out), err
 }
 
+// trimText trims and normalizes a line of text.
 func trimText(s string) string {
 	for strings.Contains(s, "\t") {
 		s = strings.ReplaceAll(s, "\t", " ")
@@ -460,23 +454,26 @@ func trimText(s string) string {
 	return strings.TrimSpace(s)
 }
 
-type SampleStat struct {
-	Total int64
-	Used  int64
+// A sampleStat holds cpu/mem/disk usage data.
+type sampleStat struct {
+	total int64
+	used  int64
 }
 
-func (s SampleStat) Minus(o SampleStat) SampleStat {
-	return SampleStat{
-		s.Total - o.Total,
-		s.Used - o.Used,
+// minus calculates s minus o.
+func (s sampleStat) minus(o sampleStat) sampleStat {
+	return sampleStat{
+		s.total - o.total,
+		s.used - o.used,
 	}
 }
 
-func (s SampleStat) Percent() int {
-	if s.Total == 0 {
+// percent calculates usage percent and returns a number between 0 and 100 (inclusive).
+func (s sampleStat) percent() int {
+	if s.total == 0 {
 		return 0
 	}
-	p := (s.Used * 100) / s.Total
+	p := (s.used * 100) / s.total
 	if p < 0 {
 		p = 0
 	}

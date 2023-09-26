@@ -4,21 +4,22 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestConn(t *testing.T) {
+func TestApi(t *testing.T) {
 	// this test uses a fake HTTP sender
 	http := &fakeSender{}
-	// create an API connection
+	// create Api
 	logger := NewLogger(nil)
 	sleep := func(time.Duration) {}
-	conn := NewApi(logger, http, sleep)
+	api := NewApi(logger, http, sleep)
 	// GET ping
 	{
 		http.responses = append(http.responses, dataAndErr{})
-		err := conn.GetPing()
+		err := api.GetPing()
 		assertNil(t, err)
 		assertEq(t, 1, len(http.requests))
 		assertEq(t, "GET ping", http.requests[0])
@@ -28,7 +29,7 @@ func TestConn(t *testing.T) {
 	{
 		http.requests = nil
 		http.responses = append(http.responses, dataAndErr{data: []byte("{\"id\": \"00000001\"}")})
-		data, err := conn.GetWatchdog("00000001")
+		data, err := api.GetWatchdog("00000001")
 		assertNil(t, err)
 		assertEq(t, "{\"id\": \"00000001\"}", string(data))
 		assertEq(t, 1, len(http.requests))
@@ -40,7 +41,7 @@ func TestConn(t *testing.T) {
 		http.requests = nil
 		http.responses = append(http.responses, dataAndErr{})
 		tstamp := time.Date(2023, 9, 1, 10, 0, 0, 0, time.Local)
-		err := conn.PostMachineSample("00000001", tstamp.UnixMilli(), 12, 13, 14)
+		err := api.PostMachineSample("00000001", tstamp.UnixMilli(), 12, 13, 14)
 		assertNil(t, err)
 		assertEq(t, 1, len(http.requests))
 		assertEq(t, "POST machine/00000001/sample tstamp=1693555200000&cpu=12&mem=13&disk=14", http.requests[0])
@@ -50,7 +51,7 @@ func TestConn(t *testing.T) {
 	{
 		http.requests = nil
 		http.responses = append(http.responses, dataAndErr{nil, fmt.Errorf("connect timeout")})
-		err := conn.PostMetricInc("00000001", 42)
+		err := api.PostMetricInc("00000001", 42)
 		assertEq(t, "connect timeout", err.Error())
 		assertEq(t, 1, len(http.requests))
 		assertEq(t, "POST metric/00000001/inc value=42", http.requests[0])
@@ -58,9 +59,39 @@ func TestConn(t *testing.T) {
 	}
 }
 
+func TestDemoForReadme(t *testing.T) {
+	// parse api_test.go
+	data, err := os.ReadFile("api_test.go")
+	assertNil(t, err)
+	want := string(data)
+	_, want, found := strings.Cut(want, "// "+"@test-start")
+	assertTrue(t, found)
+	want, _, found = strings.Cut(want, "// "+"@test-end")
+	assertTrue(t, found)
+	want = strings.ReplaceAll(want, "\t", "")
+	want = strings.TrimSpace(want)
+	// parse README.md
+	data, err = os.ReadFile("README.md")
+	assertNil(t, err)
+	have := string(data)
+	_, have, found = strings.Cut(have, "import "+"\"github.com/cvilsmeier/monibot-go\"")
+	assertTrue(t, found)
+	have, _, found = strings.Cut(have, "`"+"`"+"`")
+	assertTrue(t, found)
+	have = strings.ReplaceAll(have, "\t", "")
+	have = strings.ReplaceAll(have, "    ", "")
+	have = strings.TrimSpace(have)
+	if want != have {
+		t.Logf("want %q", want)
+		t.Logf("have %q", have)
+	}
+	assertEq(t, want, have)
+}
+
 // This code is only here to be copied into README.md
 func DemoForReadme() {
 	// import "github.com/cvilsmeier/monibot-go"
+	// @test-start
 	// init api
 	userAgent := "my-app/v1.0.0"
 	apiKey := os.Getenv("MONIBOT_API_KEY")
@@ -75,6 +106,7 @@ func DemoForReadme() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// @test-end
 }
 
 // fake http
