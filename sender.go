@@ -12,7 +12,7 @@ import (
 type Sender interface {
 
 	// Send sends a HTTP request.
-	// It returns the raw response data and/or an error.
+	// It returns the raw response data or an error.
 	Send(method, path string, body []byte) ([]byte, error)
 }
 
@@ -34,7 +34,8 @@ func NewSender(logger Logger, monibotUrl, userAgent, apiKey string) Sender {
 	return &senderImpl{logger, apiUrl, userAgent, apiKey}
 }
 
-// Send sends a HTTP request. It returns the response data and/or an error.
+// Send sends a HTTP request.
+// It returns the raw response data or an error.
 func (x *senderImpl) Send(method, path string, body []byte) ([]byte, error) {
 	urlpath := x.apiUrl + path
 	x.logger.Debug("%s %s", method, urlpath)

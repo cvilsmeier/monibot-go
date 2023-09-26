@@ -16,7 +16,7 @@ type Logger interface {
 // NewLogger creates a new Logger that writes to w.
 func NewLogger(w io.Writer) Logger {
 	if w == nil {
-		panic("w is nil")
+		w = io.Discard
 	}
 	return &loggerImpl{w}
 }

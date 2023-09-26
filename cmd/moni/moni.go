@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -63,14 +64,20 @@ func usage() {
 	print("    ping")
 	print("        Ping the Monibot API.")
 	print("")
+	print("    watchdogs")
+	print("        List watchdogs.")
+	print("")
 	print("    watchdog <watchdogId>")
-	print("        Get and print watchdog info.")
+	print("        Get watchdog by id.")
 	print("")
 	print("    reset <watchdogId>")
 	print("        Reset a watchdog.")
 	print("")
+	print("    machines")
+	print("        List machines.")
+	print("")
 	print("    machine <machineId>")
-	print("        Get and print machine info.")
+	print("        Get machine by id.")
 	print("")
 	print("    sample <machineId> [interval]")
 	print("        Send resource usage (cpu/mem/disk) samples for machine.")
@@ -79,6 +86,9 @@ func usage() {
 	print("        The default interval is 5m. The interval may be lower, but")
 	print("        serve-side rate limits may apply.")
 	print("        The sample command currently works only on linux.")
+	print("")
+	print("    metrics")
+	print("        List metrics.")
 	print("")
 	print("    metric <metricId>")
 	print("        Get and print metric info.")
@@ -142,7 +152,11 @@ func main() {
 		os.Exit(0)
 	}
 	// init the API
-	logger := monibot.NewLogger(os.Stdout)
+	var loggerWriter io.Writer
+	if verbose {
+		loggerWriter = os.Stdout
+	}
+	logger := monibot.NewLogger(loggerWriter)
 	userAgent := "moni/" + monibot.Version
 	sender := monibot.NewSender(logger, url, userAgent, apiKey)
 	api := monibot.NewApi(logger, sender)
@@ -154,6 +168,13 @@ func main() {
 		if err != nil {
 			fatal(1, "%s", err)
 		}
+	case "watchdogs":
+		// watchdogs
+		data, err := api.GetWatchdogs()
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
 	case "watchdog":
 		// watchdog <watchdogId>
 		watchdogId := flag.Arg(1)
@@ -174,6 +195,13 @@ func main() {
 		if err != nil {
 			fatal(1, "%s", err)
 		}
+	case "machines":
+		// machines
+		data, err := api.GetMachines()
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
 	case "machine":
 		// machine <machineId>
 		machineId := flag.Arg(1)
@@ -205,6 +233,13 @@ func main() {
 		if err := sampleMachine(logger, api, machineId, interval); err != nil {
 			fatal(1, "%s", err)
 		}
+	case "metrics":
+		// metrics
+		data, err := api.GetMetrics()
+		if err != nil {
+			fatal(1, "%s", err)
+		}
+		print("%s", string(data))
 	case "metric":
 		// metric <metricId>
 		metricId := flag.Arg(1)

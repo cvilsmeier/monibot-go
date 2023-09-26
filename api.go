@@ -38,8 +38,15 @@ func (x *Api) GetPing() error {
 	return err
 }
 
+// GetWatchdogs calls the /watchdogs endpoint.
+// It returns a list of watchdogs as json data.
+func (x *Api) GetWatchdogs() ([]byte, error) {
+	data, err := x.sender.Send(http.MethodGet, "watchdogs", nil)
+	return data, err
+}
+
 // GetWatchdog calls the /watchdog/:id endpoint.
-// It returns, as json data, the data of a watchdog with a specific id.
+// It returns a watchdog by id as json data.
 func (x *Api) GetWatchdog(watchdogId string) ([]byte, error) {
 	data, err := x.sender.Send(http.MethodGet, "watchdog/"+watchdogId, nil)
 	return data, err
@@ -52,8 +59,15 @@ func (x *Api) PostWatchdogReset(watchdogId string) error {
 	return err
 }
 
+// GetMachines calls the /machines endpoint.
+// It returns a list of machines as json data.
+func (x *Api) GetMachines() ([]byte, error) {
+	data, err := x.sender.Send(http.MethodGet, "machines", nil)
+	return data, err
+}
+
 // GetMachine calls the /machine/:id endpoint.
-// It returns, as json data, the data of a machine with a specific id.
+// It returns a machine by id as json data.
 func (x *Api) GetMachine(machineId string) ([]byte, error) {
 	data, err := x.sender.Send(http.MethodGet, "machine/"+machineId, nil)
 	return data, err
@@ -69,8 +83,15 @@ func (x *Api) PostMachineSample(machineId string, tstamp int64, cpu, mem, disk i
 	return err
 }
 
+// GetMetrics calls the /metrics endpoint.
+// It returns a list of metrics as json data.
+func (x *Api) GetMetrics() ([]byte, error) {
+	data, err := x.sender.Send(http.MethodGet, "metrics", nil)
+	return data, err
+}
+
 // GetMetric calls the /metric/:id endpoint.
-// It returns, as json data, the data of a metric with a specific id.
+// It returns a metric by id as json data.
 func (x *Api) GetMetric(metricId string) ([]byte, error) {
 	data, err := x.sender.Send(http.MethodGet, "metric/"+metricId, nil)
 	return data, err
