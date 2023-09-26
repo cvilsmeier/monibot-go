@@ -1,3 +1,9 @@
+/*
+Moni is a command line tool for interacting with the Monibot REST API, see https://monibot.io for details.
+It supports a number of commands. To get a list of supported commands, run
+
+	$ moni help
+*/
 package main
 
 import (
@@ -139,7 +145,8 @@ func main() {
 	logger := monibot.NewLogger(os.Stdout)
 	userAgent := "moni/" + monibot.Version
 	sender := monibot.NewSender(logger, url, userAgent, apiKey)
-	api := monibot.NewApi(logger, sender, time.Sleep)
+	api := monibot.NewApi(logger, sender)
+	// execute API commands
 	switch command {
 	case "ping":
 		// ping

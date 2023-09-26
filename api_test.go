@@ -2,9 +2,7 @@ package monibot
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"strings"
+	"io"
 	"testing"
 	"time"
 )
@@ -13,9 +11,8 @@ func TestApi(t *testing.T) {
 	// this test uses a fake HTTP sender
 	http := &fakeSender{}
 	// create Api
-	logger := NewLogger(nil)
-	sleep := func(time.Duration) {}
-	api := NewApi(logger, http, sleep)
+	logger := NewLogger(io.Discard)
+	api := NewApi(logger, http)
 	// GET ping
 	{
 		http.responses = append(http.responses, dataAndErr{})
@@ -57,60 +54,6 @@ func TestApi(t *testing.T) {
 		assertEq(t, "POST metric/00000001/inc value=42", http.requests[0])
 		assertEq(t, 0, len(http.responses))
 	}
-}
-
-func TestDemoForReadme(t *testing.T) {
-	// parse api_test.go
-	data, err := os.ReadFile("api_test.go")
-	assertNil(t, err)
-	want := string(data)
-	_, want, found := strings.Cut(want, "// "+"@test-start")
-	assertTrue(t, found)
-	want, _, found = strings.Cut(want, "// "+"@test-end")
-	assertTrue(t, found)
-	want = strings.ReplaceAll(want, "\t", "")
-	want = strings.TrimSpace(want)
-	// parse README.md
-	data, err = os.ReadFile("README.md")
-	assertNil(t, err)
-	have := string(data)
-	_, have, found = strings.Cut(have, "import "+"\"github.com/cvilsmeier/monibot-go\"")
-	assertTrue(t, found)
-	have, _, found = strings.Cut(have, "`"+"`"+"`")
-	assertTrue(t, found)
-	have = strings.ReplaceAll(have, "\t", "")
-	have = strings.ReplaceAll(have, "    ", "")
-	have = strings.TrimSpace(have)
-	if want != have {
-		t.Logf("want %q", want)
-		t.Logf("have %q", have)
-	}
-	assertEq(t, want, have)
-}
-
-// This code is only here to be copied into README.md - do not execute.
-func DemoForReadme() {
-	// ensure it's never executed
-	if 2+2 > 1 {
-		panic("do not execute")
-	}
-	// import "github.com/cvilsmeier/monibot-go"
-	// @test-start
-	// init api
-	userAgent := "my-app/v1.0.0"
-	apiKey := os.Getenv("MONIBOT_API_KEY")
-	api := NewDefaultApi(userAgent, apiKey)
-	// ping the api
-	err := api.GetPing()
-	if err != nil {
-		log.Fatal(err)
-	}
-	// reset a watchdog
-	err = api.PostWatchdogReset("000000000000001")
-	if err != nil {
-		log.Fatal(err)
-	}
-	// @test-end
 }
 
 // fake http

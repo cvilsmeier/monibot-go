@@ -21,17 +21,12 @@ Show help page with the following command:
 ```go
 import "github.com/cvilsmeier/monibot-go"
 
-// init api
+// init the api
 userAgent := "my-app/v1.0.0"
 apiKey := os.Getenv("MONIBOT_API_KEY")
 api := NewDefaultApi(userAgent, apiKey)
-// ping the api
-err := api.GetPing()
-if err != nil {
-    log.Fatal(err)
-}
 // reset a watchdog
-err = api.PostWatchdogReset("000000000000001")
+err := api.PostWatchdogReset("000000000000001")
 if err != nil {
     log.Fatal(err)
 }

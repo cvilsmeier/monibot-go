@@ -6,14 +6,18 @@ import (
 )
 
 // A Logger prints debug messages.
+// It is used by Api to print debug messages.
 type Logger interface {
 
 	// Debug prints a debug message.
 	Debug(f string, a ...any)
 }
 
-// NewLogger creates a new Logger. If w is nil then all output is discarded.
+// NewLogger creates a new Logger that writes to w.
 func NewLogger(w io.Writer) Logger {
+	if w == nil {
+		panic("w is nil")
+	}
 	return &loggerImpl{w}
 }
 

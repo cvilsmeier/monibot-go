@@ -8,6 +8,7 @@ import (
 )
 
 // A Sender sends HTTP requests and receives HTTP responses.
+// It is used by Api to send HTTP requests.
 type Sender interface {
 
 	// Send sends a HTTP request.
@@ -27,7 +28,7 @@ var _ Sender = (*senderImpl)(nil)
 // NewSender creates a new HTTP Sender.
 func NewSender(logger Logger, monibotUrl, userAgent, apiKey string) Sender {
 	if logger == nil {
-		panic("no logger")
+		panic("logger is nil")
 	}
 	apiUrl := monibotUrl + "/api/"
 	return &senderImpl{logger, apiUrl, userAgent, apiKey}
