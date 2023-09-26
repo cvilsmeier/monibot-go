@@ -88,8 +88,12 @@ func TestDemoForReadme(t *testing.T) {
 	assertEq(t, want, have)
 }
 
-// This code is only here to be copied into README.md
+// This code is only here to be copied into README.md - do not execute.
 func DemoForReadme() {
+	// ensure it's never executed
+	if 2+2 > 1 {
+		panic("do not execute")
+	}
 	// import "github.com/cvilsmeier/monibot-go"
 	// @test-start
 	// init api
