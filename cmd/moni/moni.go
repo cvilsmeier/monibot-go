@@ -134,13 +134,6 @@ func main() {
 	// parse flags
 	flag.Usage = usage
 	flag.Parse()
-	// validate flags
-	if url == "" {
-		fatal(2, "empty url")
-	}
-	if apiKey == "" {
-		fatal(2, "empty apiKey")
-	}
 	// execute non-API commands
 	command := flag.Arg(0)
 	switch command {
@@ -150,6 +143,13 @@ func main() {
 	case "version":
 		print("moni %s", monibot.Version)
 		os.Exit(0)
+	}
+	// validate flags
+	if url == "" {
+		fatal(2, "empty url")
+	}
+	if apiKey == "" {
+		fatal(2, "empty apiKey")
 	}
 	// init the API
 	var loggerWriter io.Writer
