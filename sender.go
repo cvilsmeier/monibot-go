@@ -2,6 +2,7 @@ package monibot
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +14,7 @@ type Sender interface {
 
 	// Send sends a HTTP request.
 	// It returns the raw response data or an error.
-	Send(method, path string, body []byte) ([]byte, error)
+	Send(ctx context.Context, method, path string, body []byte) ([]byte, error)
 }
 
 // SenderOptions hold custom options for a Sender.
@@ -59,14 +60,14 @@ func NewSenderWithOptions(apiKey string, options SenderOptions) Sender {
 
 // Send sends a HTTP request.
 // It returns the raw response data or an error.
-func (s *httpSender) Send(method, path string, body []byte) ([]byte, error) {
+func (s *httpSender) Send(ctx context.Context, method, path string, body []byte) ([]byte, error) {
 	urlpath := s.apiUrl + path
 	s.logger.Debug("%s %s", method, urlpath)
 	if len(body) > 0 {
 		s.logger.Debug("body=%s", string(body))
 	}
 	bodyReader := bytes.NewReader(body)
-	req, err := http.NewRequest(method, urlpath, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, urlpath, bodyReader)
 	if err != nil {
 		s.logger.Debug("cannot create request: %s", err)
 		return nil, err
