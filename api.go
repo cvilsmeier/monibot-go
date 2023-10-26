@@ -7,27 +7,17 @@ import (
 
 // Api provides access to the Monibot REST API.
 type Api struct {
-	logger Logger
 	sender Sender
 }
 
-// NewDefaultApi creates an Api with default implementations.
-// This should be suited for most use cases.
-func NewDefaultApi(userAgent, apiKey string) *Api {
-	logger := NewDefaultLogger()
-	sender := NewSender(logger, "https://monibot.io", userAgent, apiKey)
-	return NewApi(logger, sender)
+// NewApi creates an Api that sends data to https://monibot.io.
+func NewApi(apiKey string) *Api {
+	return NewApiWithSender(NewSenderWithOptions(apiKey, SenderOptions{}))
 }
 
-// NewApi creates an Api with a custom logger and sender.
-func NewApi(logger Logger, sender Sender) *Api {
-	if logger == nil {
-		panic("no logger")
-	}
-	if sender == nil {
-		panic("no sender")
-	}
-	return &Api{logger, sender}
+// NewApiWithSender creates an Api that uses sender for sending data.
+func NewApiWithSender(sender Sender) *Api {
+	return &Api{sender}
 }
 
 // GetPing calls the /ping endpoint.

@@ -151,14 +151,16 @@ func main() {
 	if apiKey == "" {
 		fatal(2, "empty apiKey")
 	}
-	// init the API
+	// init Sender and Api
 	logger := monibot.NewDiscardLogger()
 	if verbose {
-		logger = monibot.NewDefaultLogger()
+		logger = monibot.NewDefaultLogger(log.Default())
 	}
-	userAgent := "moni/" + monibot.Version
-	sender := monibot.NewSender(logger, url, userAgent, apiKey)
-	api := monibot.NewApi(logger, sender)
+	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{
+		MonibotUrl: url,
+		Logger:     logger,
+	})
+	api := monibot.NewApiWithSender(sender)
 	// execute API commands
 	switch command {
 	case "ping":

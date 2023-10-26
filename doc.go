@@ -1,14 +1,14 @@
 /*
-Package monibot provides a SDK to interact with the Monibot REST API, see https://monibot.io for details.
+Package monibot provides a SDK to interact with the Monibot REST API,
+see https://monibot.io for details.
 
 	import "github.com/cvilsmeier/monibot-go"
 
 	// init the api
-	userAgent := "my-app/v1.0.0"
 	apiKey := os.Getenv("MONIBOT_API_KEY")
-	api := NewDefaultApi(userAgent, apiKey)
+	api := NewApi(apiKey)
 	// reset a watchdog
-	err := api.PostWatchdogReset("000000000000001")
+	err := api.PostWatchdogReset("2f5f6d47183fdf415a7476837351730c")
 	if err != nil {
 		log.Fatal(err)
 	}

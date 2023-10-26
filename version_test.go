@@ -4,18 +4,21 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/cvilsmeier/monibot-go/internal/assert"
 )
 
 func TestVersion(t *testing.T) {
+	ass := assert.New(t)
 	// Version must start with "v"
-	assertTrue(t, len(Version) >= 6)
-	assertEq(t, "v", Version[0:1])
+	ass.True(len(Version) >= 6)
+	ass.Eq("v", Version[0:1])
 	// parse CHANGELOG.md
 	data, err := os.ReadFile("CHANGELOG.md")
-	assertNil(t, err)
+	ass.Nil(err)
 	_, rest, found := strings.Cut(string(data), "## v")
-	assertEq(t, true, found)
+	ass.Eq(true, found)
 	rest, _, found = strings.Cut(rest, " ")
-	assertTrue(t, found)
-	assertEq(t, Version, "v"+rest)
+	ass.True(found)
+	ass.Eq(Version, "v"+rest)
 }
