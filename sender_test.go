@@ -1,7 +1,6 @@
 package monibot
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -27,15 +26,14 @@ func TestSend(t *testing.T) {
 	defer server.Close()
 	// init sender
 	sender := NewSenderWithOptions("123456", SenderOptions{MonibotUrl: server.URL})
-	ctx := context.Background()
 	// send ping - good
 	pingOk.Store(true)
-	data, err := sender.Send(ctx, "GET", "/ping", nil)
+	data, err := sender.Send("GET", "/ping", nil)
 	ass.Nil(err)
 	ass.Eq("ok", string(data))
 	// send ping - error
 	pingOk.Store(false)
-	data, err = sender.Send(ctx, "GET", "/ping", nil)
+	data, err = sender.Send("GET", "/ping", nil)
 	ass.Eq("response status 500", err.Error())
 	ass.Eq("", string(data))
 }

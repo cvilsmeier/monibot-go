@@ -1,7 +1,6 @@
 package monibot
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -103,7 +102,7 @@ type fakeSender struct {
 
 var _ Sender = (*fakeSender)(nil)
 
-func (f *fakeSender) Send(_ context.Context, method, path string, data []byte) ([]byte, error) {
+func (f *fakeSender) Send(method, path string, data []byte) ([]byte, error) {
 	req := fmt.Sprintf("%s %s", method, path)
 	if len(data) > 0 {
 		req += fmt.Sprintf(" %s", string(data))

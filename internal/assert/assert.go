@@ -29,11 +29,6 @@ func (a *Assert) Nil(have any) {
 func (a *Assert) Eq(want, have any) {
 	a.t.Helper()
 	if want != have {
-		if wantStr, isString := want.(string); isString {
-			if haveStr, isString := have.(string); isString {
-				a.t.Logf("\n--want--\n%s\n--have--\n%s", wantStr, haveStr)
-			}
-		}
 		a.t.Fatalf("want %T(%v) but have %T(%v)", want, want, have, have)
 	}
 }
