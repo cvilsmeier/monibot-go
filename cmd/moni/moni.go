@@ -154,7 +154,7 @@ func main() {
 	// init Sender and Api
 	logger := monibot.NewDiscardLogger()
 	if verbose {
-		logger = monibot.NewDefaultLogger(log.Default())
+		logger = monibot.NewLogger(log.Default())
 	}
 	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{
 		MonibotUrl: url,
@@ -171,22 +171,22 @@ func main() {
 		}
 	case "watchdogs":
 		// watchdogs
-		data, err := api.GetWatchdogs()
+		watchdogs, err := api.GetWatchdogs()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
-		print("%s", string(data))
+		printWatchdogs(watchdogs)
 	case "watchdog":
 		// watchdog <watchdogId>
 		watchdogId := flag.Arg(1)
 		if watchdogId == "" {
 			fatal(2, "empty watchdogId")
 		}
-		data, err := api.GetWatchdog(watchdogId)
+		watchdog, err := api.GetWatchdog(watchdogId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
-		print("%s", string(data))
+		printWatchdogs([]monibot.Watchdog{watchdog})
 	case "reset":
 		// reset <watchdogId>
 		watchdogId := flag.Arg(1)
@@ -198,22 +198,22 @@ func main() {
 		}
 	case "machines":
 		// machines
-		data, err := api.GetMachines()
+		machines, err := api.GetMachines()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
-		print("%s", string(data))
+		printMachines(machines)
 	case "machine":
 		// machine <machineId>
 		machineId := flag.Arg(1)
 		if machineId == "" {
 			fatal(2, "empty machineId")
 		}
-		data, err := api.GetMachine(machineId)
+		machine, err := api.GetMachine(machineId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
-		print("%s", string(data))
+		printMachines([]monibot.Machine{machine})
 	case "sample":
 		// sample <machineId> [interval]
 		machineId := flag.Arg(1)
@@ -236,22 +236,22 @@ func main() {
 		}
 	case "metrics":
 		// metrics
-		data, err := api.GetMetrics()
+		metrics, err := api.GetMetrics()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
-		print("%s", string(data))
+		printMetrics(metrics)
 	case "metric":
 		// metric <metricId>
 		metricId := flag.Arg(1)
 		if metricId == "" {
 			fatal(2, "empty metricId")
 		}
-		data, err := api.GetMetric(metricId)
+		metric, err := api.GetMetric(metricId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
-		print("%s", string(data))
+		printMetrics([]monibot.Metric{metric})
 	case "inc":
 		// inc <metricId> <value>
 		metricId := flag.Arg(1)
@@ -300,6 +300,30 @@ func main() {
 // print prints a line to stdout.
 func print(f string, a ...any) {
 	fmt.Printf(f+"\n", a...)
+}
+
+// printWatchdogs prints watchdogs.
+func printWatchdogs(watchdogs []monibot.Watchdog) {
+	print("%-35s | %-25s | %s", "Id", "Name", "IntervalMillis")
+	for _, watchdog := range watchdogs {
+		print("%-35s | %-25s | %d", watchdog.Id, watchdog.Name, watchdog.IntervalMillis)
+	}
+}
+
+// printMachines prints machines.
+func printMachines(machines []monibot.Machine) {
+	print("%-35s | %s", "Id", "Name")
+	for _, machine := range machines {
+		print("%-35s | %s", machine.Id, machine.Name)
+	}
+}
+
+// printMetrics prints metrics.
+func printMetrics(metrics []monibot.Metric) {
+	print("%-35s | %-25s | %s", "Id", "Name", "Type")
+	for _, metric := range metrics {
+		print("%-35s | %-25s | %d", metric.Id, metric.Name, metric.Type)
+	}
 }
 
 // fatal prints a message to stdout and exits with exitCode.

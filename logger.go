@@ -11,19 +11,19 @@ type Logger interface {
 	Debug(f string, a ...any)
 }
 
-// NewDefaultLogger creates a new Logger that logs to a log.Logger.
-func NewDefaultLogger(out *log.Logger) Logger {
-	return &defaultLogger{out}
+// NewLogger creates a new Logger that logs to a log.Logger.
+func NewLogger(out *log.Logger) Logger {
+	return &logLogger{out}
 }
 
-type defaultLogger struct {
+type logLogger struct {
 	out *log.Logger
 }
 
-var _ Logger = (*defaultLogger)(nil)
+var _ Logger = (*logLogger)(nil)
 
-func (l *defaultLogger) Debug(f string, a ...any) {
-	l.out.Printf("DEBUG: "+f+"\n", a...)
+func (l *logLogger) Debug(f string, a ...any) {
+	l.out.Printf(f+"\n", a...)
 }
 
 // NewDiscardLogger creates a new Logger that discards all output.

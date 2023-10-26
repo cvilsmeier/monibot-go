@@ -76,7 +76,8 @@ func (s *httpSender) Send(ctx context.Context, method, path string, body []byte)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 	req.Header.Set("User-Agent", s.userAgent)
-	req.Header.Set("X-Monibot-SDK-Version", Version)
+	req.Header.Set("X-Monibot-Version", Version)
+	req.Header.Set("X-Monibot-Trial", "1") // TODO weak-code this
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

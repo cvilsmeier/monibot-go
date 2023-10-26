@@ -10,6 +10,13 @@ import (
 )
 
 func TestApi(t *testing.T) {
+	str := func(a any) string {
+		switch x := a.(type) {
+		case Watchdog:
+			return fmt.Sprintf("Id=%s, Name=%s, IntervalMillis=%d", x.Id, x.Name, x.IntervalMillis)
+		}
+		return "?"
+	}
 	ass := assert.New(t)
 	// this test uses a fake HTTP sender
 	sender := &fakeSender{}
@@ -27,10 +34,16 @@ func TestApi(t *testing.T) {
 	}
 	// GET watchdogs
 	{
-		sender.responses = append(sender.responses, dataAndErr{data: []byte("[{\"id\": \"00000001\"}]")})
-		data, err := api.GetWatchdogs()
+		resp := `[
+			{"id":"0001", "name":"Cronjob 1", "intervalMillis": 72000000},
+			{"id":"0002", "name":"Cronjob 2", "intervalMillis": 36000000}
+		]`
+		sender.responses = append(sender.responses, dataAndErr{data: []byte(resp)})
+		watchdogs, err := api.GetWatchdogs()
 		ass.Nil(err)
-		ass.Eq("[{\"id\": \"00000001\"}]", string(data))
+		ass.Eq(2, len(watchdogs))
+		ass.Eq("Id=0001, Name=Cronjob 1, IntervalMillis=72000000", str(watchdogs[0]))
+		ass.Eq("Id=0002, Name=Cronjob 2, IntervalMillis=36000000", str(watchdogs[1]))
 		ass.Eq(1, len(sender.requests))
 		ass.Eq("GET watchdogs", sender.requests[0])
 		ass.Eq(0, len(sender.responses))
@@ -38,10 +51,11 @@ func TestApi(t *testing.T) {
 	}
 	// GET watchdog/00000001
 	{
-		sender.responses = append(sender.responses, dataAndErr{data: []byte("{\"id\": \"00000001\"}")})
-		data, err := api.GetWatchdog("00000001")
+		resp := `{"id":"0001", "name":"Cronjob 1", "intervalMillis": 72000000}`
+		sender.responses = append(sender.responses, dataAndErr{data: []byte(resp)})
+		watchdog, err := api.GetWatchdog("00000001")
 		ass.Nil(err)
-		ass.Eq("{\"id\": \"00000001\"}", string(data))
+		ass.Eq("Id=0001, Name=Cronjob 1, IntervalMillis=72000000", str(watchdog))
 		ass.Eq(1, len(sender.requests))
 		ass.Eq("GET watchdog/00000001", sender.requests[0])
 		ass.Eq(0, len(sender.responses))

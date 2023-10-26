@@ -2,6 +2,7 @@ package monibot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -30,17 +31,27 @@ func (x *Api) GetPing() error {
 }
 
 // GetWatchdogs calls the /watchdogs endpoint.
-// It returns a list of watchdogs as json data.
-func (x *Api) GetWatchdogs() ([]byte, error) {
+// It returns a list of watchdogs
+func (x *Api) GetWatchdogs() ([]Watchdog, error) {
 	data, err := x.sender.Send(context.Background(), http.MethodGet, "watchdogs", nil)
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+	var watchdogs []Watchdog
+	err = json.Unmarshal(data, &watchdogs)
+	return watchdogs, err
 }
 
 // GetWatchdog calls the /watchdog/:id endpoint.
-// It returns a watchdog by id as json data.
-func (x *Api) GetWatchdog(watchdogId string) ([]byte, error) {
+// It returns a watchdog by id.
+func (x *Api) GetWatchdog(watchdogId string) (Watchdog, error) {
 	data, err := x.sender.Send(context.Background(), http.MethodGet, "watchdog/"+watchdogId, nil)
-	return data, err
+	if err != nil {
+		return Watchdog{}, err
+	}
+	var w Watchdog
+	err = json.Unmarshal(data, &w)
+	return w, err
 }
 
 // PostWatchdogReset calls the /watchdog/:id/reset endpoint.
@@ -51,17 +62,27 @@ func (x *Api) PostWatchdogReset(watchdogId string) error {
 }
 
 // GetMachines calls the /machines endpoint.
-// It returns a list of machines as json data.
-func (x *Api) GetMachines() ([]byte, error) {
+// It returns a list of machines.
+func (x *Api) GetMachines() ([]Machine, error) {
 	data, err := x.sender.Send(context.Background(), http.MethodGet, "machines", nil)
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+	var machines []Machine
+	err = json.Unmarshal(data, &machines)
+	return machines, err
 }
 
 // GetMachine calls the /machine/:id endpoint.
-// It returns a machine by id as json data.
-func (x *Api) GetMachine(machineId string) ([]byte, error) {
+// It returns a machine by id.
+func (x *Api) GetMachine(machineId string) (Machine, error) {
 	data, err := x.sender.Send(context.Background(), http.MethodGet, "machine/"+machineId, nil)
-	return data, err
+	if err != nil {
+		return Machine{}, err
+	}
+	var machine Machine
+	err = json.Unmarshal(data, &machine)
+	return machine, err
 }
 
 // PostMachineSample calls the /machine/:id/sample endpoint.
@@ -76,16 +97,26 @@ func (x *Api) PostMachineSample(machineId string, tstamp int64, cpu, mem, disk i
 
 // GetMetrics calls the /metrics endpoint.
 // It returns a list of metrics as json data.
-func (x *Api) GetMetrics() ([]byte, error) {
+func (x *Api) GetMetrics() ([]Metric, error) {
 	data, err := x.sender.Send(context.Background(), http.MethodGet, "metrics", nil)
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+	var metrics []Metric
+	err = json.Unmarshal(data, &metrics)
+	return metrics, err
 }
 
 // GetMetric calls the /metric/:id endpoint.
 // It returns a metric by id as json data.
-func (x *Api) GetMetric(metricId string) ([]byte, error) {
+func (x *Api) GetMetric(metricId string) (Metric, error) {
 	data, err := x.sender.Send(context.Background(), http.MethodGet, "metric/"+metricId, nil)
-	return data, err
+	if err != nil {
+		return Metric{}, err
+	}
+	var metric Metric
+	err = json.Unmarshal(data, &metric)
+	return metric, err
 }
 
 // PostMetricInc calls the /metric/:id/inc endpoint.
