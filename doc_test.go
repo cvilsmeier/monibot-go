@@ -16,35 +16,38 @@ func TestDemoForDoc(t *testing.T) {
 	ass.Nil(err)
 	want, found := cutout(normalizeText(data), "// "+"demo-start", "// "+"demo-end")
 	ass.True(found)
-	want = strings.TrimSpace(strings.ReplaceAll(want, "\t", ""))
+	want = strings.TrimSpace(replace(want, "\t", ""))
 	// parse README.md
 	data, err = os.ReadFile("README.md")
 	ass.Nil(err)
 	have, found := cutout(normalizeText(data), "import \"github.com/cvilsmeier/monibot-go\"", "```")
 	ass.True(found)
-	have = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(have, "\t", ""), "    ", ""))
+	have = strings.TrimSpace(replace(replace(have, "\t", ""), "    ", ""))
 	ass.Eq(want, have)
 	// parse doc.go
 	data, err = os.ReadFile("doc.go")
 	ass.Nil(err)
 	have, found = cutout(normalizeText(data), "import \"github.com/cvilsmeier/monibot-go\"", "Monibot monitors")
 	ass.True(found)
-	have = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(have, "\t", ""), "    ", ""))
+	have = strings.TrimSpace(replace(replace(have, "\t", ""), "    ", ""))
 	ass.Eq(want, have)
 }
 
 func normalizeText(data []byte) string {
 	// remove tabs
-	s := strings.ReplaceAll(string(data), "\t", " ")
+	s := replace(string(data), "\t", " ")
 	// remove space chains
-	for strings.Contains(s, "  ") {
-		s = strings.ReplaceAll(s, "  ", " ")
-	}
+	s = replace(s, "  ", " ")
 	// remove indentations
-	for strings.Contains(s, "\n ") {
-		s = strings.ReplaceAll(s, "\n ", "\n")
-	}
+	s = replace(s, "\n ", "\n")
 	return s
+}
+
+func replace(str, old, new string) string {
+	for strings.Contains(str, old) {
+		str = strings.ReplaceAll(str, old, new)
+	}
+	return str
 }
 
 func cutout(s, pre, post string) (string, bool) {

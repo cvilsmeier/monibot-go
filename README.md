@@ -25,7 +25,7 @@ import "github.com/cvilsmeier/monibot-go"
 apiKey := os.Getenv("MONIBOT_API_KEY")
 api := NewApi(apiKey)
 // reset a watchdog
-err := api.PostWatchdogReset(context.Background(), "2f5f6d47183fdf415a7476837351730c")
+err := api.PostWatchdogReset("2f5f6d47183fdf415a7476837351730c")
 if err != nil {
     log.Fatal(err)
 }

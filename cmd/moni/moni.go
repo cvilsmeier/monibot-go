@@ -156,11 +156,9 @@ func main() {
 	if verbose {
 		logger = monibot.NewLogger(log.Default())
 	}
-	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{
-		MonibotUrl: url,
-		Logger:     logger,
-	})
-	api := monibot.NewApiWithSender(sender)
+	sender := monibot.NewSenderWithOptions(logger, url, "", apiKey)
+	retrySender := monibot.NewRetrySenderWithOptions(logger, sender, time.After, 12, 5*time.Second)
+	api := monibot.NewApiWithSender(retrySender)
 	// execute API commands
 	switch command {
 	case "ping":
@@ -506,19 +504,18 @@ func execCommand(name string, args ...string) (string, error) {
 
 // trimText trims and normalizes a line of text.
 func trimText(s string) string {
-	for strings.Contains(s, "\t") {
-		s = strings.ReplaceAll(s, "\t", " ")
-	}
-	for strings.Contains(s, "\r") {
-		s = strings.ReplaceAll(s, "\r", "")
-	}
-	for strings.Contains(s, "\n") {
-		s = strings.ReplaceAll(s, "\n", "")
-	}
-	for strings.Contains(s, "  ") {
-		s = strings.ReplaceAll(s, "  ", " ")
-	}
+	s = replace(s, "\t", " ")
+	s = replace(s, "\r", "")
+	s = replace(s, "\n", "")
+	s = replace(s, "  ", " ")
 	return strings.TrimSpace(s)
+}
+
+func replace(str, old, new string) string {
+	for strings.Contains(str, old) {
+		str = strings.ReplaceAll(str, old, new)
+	}
+	return str
 }
 
 // A sampleStat holds cpu/mem/disk usage data.

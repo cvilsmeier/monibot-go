@@ -8,7 +8,7 @@ import (
 type Logger interface {
 
 	// Debug prints a debug message.
-	Debug(f string, a ...any)
+	Debug(format string, args ...any)
 }
 
 // NewLogger creates a new Logger that logs to a log.Logger.
@@ -22,8 +22,8 @@ type logLogger struct {
 
 var _ Logger = (*logLogger)(nil)
 
-func (l *logLogger) Debug(f string, a ...any) {
-	l.out.Printf(f+"\n", a...)
+func (l *logLogger) Debug(format string, args ...any) {
+	l.out.Printf(format+"\n", args...)
 }
 
 // NewDiscardLogger creates a new Logger that discards all output.
@@ -36,5 +36,5 @@ type discardLogger struct {
 
 var _ Logger = (*discardLogger)(nil)
 
-func (l *discardLogger) Debug(f string, a ...any) {
+func (l *discardLogger) Debug(format string, args ...any) {
 }

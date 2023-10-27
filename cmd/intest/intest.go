@@ -17,11 +17,9 @@ func main() {
 	if murl == "" {
 		log.Fatalf("need MONIBOT_URL")
 	}
-	// logger := log.New(os.Stdout, "Monibot-Debug: ", log.LstdFlags)
-	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{
-		MonibotUrl: murl,
-		// Logger:     monibot.NewLogger(logger),
-	})
+	logLogger := log.New(os.Stdout, "Monibot-Debug: ", log.LstdFlags)
+	logger := monibot.NewLogger(logLogger)
+	sender := monibot.NewSenderWithOptions(logger, murl, "", apiKey)
 	api := monibot.NewApiWithSender(sender)
 	// ping
 	err := api.GetPing()

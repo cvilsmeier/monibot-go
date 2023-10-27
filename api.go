@@ -14,7 +14,7 @@ type Api struct {
 
 // NewApi creates an Api that sends data to https://monibot.io.
 func NewApi(apiKey string) *Api {
-	return NewApiWithSender(NewSenderWithOptions(apiKey, SenderOptions{}))
+	return NewApiWithSender(NewSender(apiKey))
 }
 
 // NewApiWithSender creates an Api that uses sender for sending data.

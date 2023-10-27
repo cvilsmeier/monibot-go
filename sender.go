@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 // A Sender sends HTTP requests and receives HTTP responses.
@@ -17,19 +19,7 @@ type Sender interface {
 	Send(ctx context.Context, method, path string, body []byte) ([]byte, error)
 }
 
-// SenderOptions hold custom options for a Sender.
-type SenderOptions struct {
-
-	// The URL to send data to. Default is "https://monibot.io".
-	MonibotUrl string
-
-	// The UserAgent. Default is "monibot/v0.0.0" (whatever the current version is).
-	UserAgent string
-
-	// The Logger for verbose debug logging. Default logs nothing.
-	Logger Logger
-}
-
+// httpSender is a Sender that uses HTTP for sending API requests.
 type httpSender struct {
 	logger    Logger
 	apiUrl    string
@@ -39,23 +29,26 @@ type httpSender struct {
 
 var _ Sender = (*httpSender)(nil)
 
-// NewSender creates a Sender that sends data to https://monibot.io.
+// NewSender creates a new Senderthat sends api requests to https://monibot.io.
 func NewSender(apiKey string) Sender {
-	return NewSenderWithOptions(apiKey, SenderOptions{})
+	return NewSenderWithOptions(nil, "", "", apiKey)
 }
 
-// NewSenderWithOptions creates a new Sender with custom options.
-func NewSenderWithOptions(apiKey string, options SenderOptions) Sender {
-	if options.MonibotUrl == "" {
-		options.MonibotUrl = "https://monibot.io"
+// NewSenderWithOptions creates a new Sender.
+// If logger is nil, it logs nothing.
+// If monibotUrl is empty, it sends api requests to https://monibot.io.
+// If userAgent is empty, it uses "monibot/v0.0.0" (whatever the current version is).
+func NewSenderWithOptions(logger Logger, monibotUrl, userAgent, apiKey string) Sender {
+	if logger == nil {
+		logger = NewDiscardLogger()
 	}
-	if options.UserAgent == "" {
-		options.UserAgent = "monibot/" + Version
+	if monibotUrl == "" {
+		monibotUrl = "https://monibot.io"
 	}
-	if options.Logger == nil {
-		options.Logger = NewDiscardLogger()
+	if userAgent == "" {
+		userAgent = "monibot/" + Version
 	}
-	return &httpSender{options.Logger, options.MonibotUrl + "/api/", options.UserAgent, apiKey}
+	return &httpSender{logger, monibotUrl + "/api/", userAgent, apiKey}
 }
 
 // Send sends a HTTP request.
@@ -76,9 +69,11 @@ func (s *httpSender) Send(ctx context.Context, method, path string, body []byte)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 	req.Header.Set("User-Agent", s.userAgent)
+	req.Header.Set("X-Monibot-Client", "monibot-go")
 	req.Header.Set("X-Monibot-Version", Version)
-	req.Header.Set("X-Monibot-Trial", "1") // TODO weak-code this
+	req.Header.Set("X-Monibot-TstampMillis", strconv.FormatInt(time.Now().UnixMilli(), 10))
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		s.logger.Debug("%s %s: %s", req.Method, urlpath, err)

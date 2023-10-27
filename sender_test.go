@@ -26,7 +26,7 @@ func TestSend(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 	// init sender
-	sender := NewSenderWithOptions("123456", SenderOptions{MonibotUrl: server.URL})
+	sender := NewSenderWithOptions(nil, server.URL, "", "123456")
 	// send ping - good
 	pingOk.Store(true)
 	data, err := sender.Send(context.Background(), "GET", "/ping", nil)
