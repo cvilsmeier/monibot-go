@@ -192,9 +192,10 @@ func main() {
 	case "reset":
 		// moni reset <watchdogId>
 		watchdogId := flag.Arg(1)
-		err := retry(func() error {
-			return api.PostWatchdogReset(watchdogId)
-		})
+		if watchdogId == "" {
+			fatal(2, "empty watchdogId")
+		}
+		err := api.PostWatchdogReset(watchdogId)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -268,9 +269,7 @@ func main() {
 		if err != nil {
 			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
-		err = retry(func() error {
-			return api.PostMetricInc(metricId, value)
-		})
+		err = api.PostMetricInc(metricId, value)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -288,9 +287,7 @@ func main() {
 		if err != nil {
 			fatal(2, "cannot parse value %q: %s", valueStr, err)
 		}
-		err = retry(func() error {
-			return api.PostMetricSet(metricId, value)
-		})
+		err = api.PostMetricSet(metricId, value)
 		if err != nil {
 			fatal(1, "%s", err)
 		}
@@ -334,20 +331,6 @@ func fatal(exitCode int, f string, a ...any) {
 	os.Exit(exitCode)
 }
 
-func retry(f func() error) error {
-	var err error
-	for i := 0; i < 3; i++ {
-		if i > 0 {
-			time.Sleep(time.Duration(i) * 10 * time.Second)
-		}
-		err = f()
-		if err == nil {
-			return nil
-		}
-	}
-	return err
-}
-
 // sampleMachine samples the local machine (cpu/mem/disk) in an endless loop.
 func sampleMachine(logger monibot.Logger, api *monibot.Api, machineId string, interval time.Duration) error {
 	_, err := api.GetMachine(machineId)
@@ -382,15 +365,13 @@ func sampleMachine(logger monibot.Logger, api *monibot.Api, machineId string, in
 		// POST machine sample
 		diffCpuStat := cpuStat.minus(lastCpuStat)
 		lastCpuStat = cpuStat
-		err = retry(func() error {
-			return api.PostMachineSample(
-				machineId,
-				time.Now().UnixMilli(),
-				diffCpuStat.percent(),
-				memStat.percent(),
-				diskStat.percent(),
-			)
-		})
+		err = api.PostMachineSample(
+			machineId,
+			time.Now().UnixMilli(),
+			diffCpuStat.percent(),
+			memStat.percent(),
+			diskStat.percent(),
+		)
 		if err != nil {
 			log.Printf("ERROR cannot PostMachineSample: %s", err)
 		}
@@ -398,6 +379,7 @@ func sampleMachine(logger monibot.Logger, api *monibot.Api, machineId string, in
 }
 
 // loadCpuStat loads cpu usage stat from /proc/stat.
+// TODO better switch to loadavg
 func loadCpuStat(logger monibot.Logger) (sampleStat, error) {
 	logger.Debug("loadCpuStat: read /proc/stat")
 	f, err := os.Open("/proc/stat")

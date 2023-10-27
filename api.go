@@ -122,8 +122,10 @@ func (a *Api) PostMachineSample(machineId string, tstamp int64, cpu, mem, disk i
 
 // PostMachineSample calls the /machine/:id/sample endpoint.
 // It is used to upload a cpu/mem/disk usage sample.
-// The tstamp parameter is the number of milliseconds since 1970-01-01T00:00:00Z, always UTC, never local time.
-// The cpu, mem and disk parameters are usage precentages between 0 and 100 inclusively.
+// The tstamp parameter is the number of milliseconds since
+// 1970-01-01T00:00:00Z, always UTC, never local time.
+// The cpu, mem and disk parameters are usage precentages between
+// 0 and 100 inclusively.
 func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string, tstamp int64, cpu, mem, disk int) error {
 	body := fmt.Sprintf("tstamp=%d&cpu=%d&mem=%d&disk=%d", tstamp, cpu, mem, disk)
 	_, err := a.sender.Send(ctx, http.MethodPost, "machine/"+machineId+"/sample", []byte(body))
@@ -136,7 +138,7 @@ func (a *Api) GetMetrics() ([]Metric, error) {
 }
 
 // GetMetrics calls the /metrics endpoint.
-// It returns a list of metrics as json data.
+// It returns a list of metrics.
 func (a *Api) GetMetricsWithContext(ctx context.Context) ([]Metric, error) {
 	data, err := a.sender.Send(ctx, http.MethodGet, "metrics", nil)
 	if err != nil {
@@ -153,7 +155,7 @@ func (a *Api) GetMetric(metricId string) (Metric, error) {
 }
 
 // GetMetric calls the /metric/:id endpoint.
-// It returns a metric by id as json data.
+// It returns a metric by id.
 func (a *Api) GetMetricWithContext(ctx context.Context, metricId string) (Metric, error) {
 	data, err := a.sender.Send(ctx, http.MethodGet, "metric/"+metricId, nil)
 	if err != nil {
