@@ -13,11 +13,15 @@ func TestRetrySender(t *testing.T) {
 	ass := assert.New(t)
 	sender := &fakeSender{}
 	timeChan := make(chan time.Time)
-	timeAfter := func(d time.Duration) <-chan time.Time {
-		return timeChan
-	}
-	logger := &fakeLogger{t, true}
-	retry := NewRetrySenderWithOptions(logger, sender, timeAfter, 3, 2*time.Second)
+	logger := &fakeLogger{t, false}
+	retry := NewRetrySenderWithOptions(sender, RetrySenderOptions{
+		Logger: logger,
+		TimeAfter: func(d time.Duration) <-chan time.Time {
+			return timeChan
+		},
+		Trials: 3,
+		Delay:  2 * time.Second,
+	})
 	// ping
 	sender.responses = []fakeResponse{
 		{nil, fmt.Errorf("connection refused")},

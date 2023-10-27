@@ -17,33 +17,49 @@ type RetrySender struct {
 
 var _ Sender = (*RetrySender)(nil)
 
-// TODO
-func NewRetrySender(sender Sender) *RetrySender {
-	return NewRetrySenderWithOptions(nil, sender, nil, 0, 0)
+// RetrySenderOptions hold RetrySender opptions.
+type RetrySenderOptions struct {
+
+	// Default logs nothing.
+	Logger Logger
+
+	// Default is time.After.
+	TimeAfter func(time.Duration) <-chan time.Time
+
+	// Default is 12.
+	Trials int
+
+	// Default is 5s.
+	Delay time.Duration
 }
 
-// TODO
-func NewRetrySenderWithOptions(logger Logger, sender Sender, timeAfter func(time.Duration) <-chan time.Time, trials int, delay time.Duration) *RetrySender {
-	if logger == nil {
-		logger = NewDiscardLogger()
-	}
+// NewRetrySender creates a new RetrySender that does max. 12 trials with a delay of 5 seconds in between.
+func NewRetrySender(sender Sender) *RetrySender {
+	return NewRetrySenderWithOptions(sender, RetrySenderOptions{})
+}
+
+// NewRetrySenderWithOptions creates a new RetrySender with custom options.
+func NewRetrySenderWithOptions(sender Sender, opt RetrySenderOptions) *RetrySender {
 	if sender == nil {
 		panic("sender == nil")
 	}
-	if timeAfter == nil {
-		timeAfter = time.After
+	if opt.Logger == nil {
+		opt.Logger = NewDiscardLogger()
 	}
-	if trials < 1 {
-		trials = 12
+	if opt.TimeAfter == nil {
+		opt.TimeAfter = time.After
 	}
-	if delay <= 0 {
-		delay = 5 * time.Second
+	if opt.Trials < 1 {
+		opt.Trials = 12
 	}
-	return &RetrySender{logger, sender, timeAfter, trials, delay}
+	if opt.Delay <= 0 {
+		opt.Delay = 5 * time.Second
+	}
+	return &RetrySender{opt.Logger, sender, opt.TimeAfter, opt.Trials, opt.Delay}
 }
 
 func (s *RetrySender) Send(ctx context.Context, method, path string, body []byte) ([]byte, error) {
-	// first trial, always
+	// first trial, for sure
 	s.logger.Debug("trial #1 for %s %s", method, path)
 	data, err := s.sender.Send(ctx, method, path, body)
 	if err == nil {

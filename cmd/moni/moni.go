@@ -115,6 +115,7 @@ func usage() {
 
 func main() {
 	log.SetOutput(os.Stdout)
+	// flags
 	// -url https://monibot.io
 	url := os.Getenv(urlEnvKey)
 	if url == "" {
@@ -129,6 +130,9 @@ func main() {
 	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
 	// -v
 	verboseStr := os.Getenv(verboseEnvKey)
+	if verboseStr == "" {
+		verboseStr = strconv.FormatBool(defaultVerbose)
+	}
 	verbose := verboseStr == "true"
 	flag.BoolVar(&verbose, verboseFlag, verbose, "")
 	// parse flags
@@ -156,26 +160,26 @@ func main() {
 	if verbose {
 		logger = monibot.NewLogger(log.Default())
 	}
-	sender := monibot.NewSenderWithOptions(logger, url, "", apiKey)
-	retrySender := monibot.NewRetrySenderWithOptions(logger, sender, time.After, 12, 5*time.Second)
+	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{Logger: logger, MonibotUrl: url})
+	retrySender := monibot.NewRetrySenderWithOptions(sender, monibot.RetrySenderOptions{Logger: logger})
 	api := monibot.NewApiWithSender(retrySender)
 	// execute API commands
 	switch command {
 	case "ping":
-		// ping
+		// moni ping
 		err := api.GetPing()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
 	case "watchdogs":
-		// watchdogs
+		// moni watchdogs
 		watchdogs, err := api.GetWatchdogs()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
 		printWatchdogs(watchdogs)
 	case "watchdog":
-		// watchdog <watchdogId>
+		// moni watchdog <watchdogId>
 		watchdogId := flag.Arg(1)
 		if watchdogId == "" {
 			fatal(2, "empty watchdogId")
@@ -186,7 +190,7 @@ func main() {
 		}
 		printWatchdogs([]monibot.Watchdog{watchdog})
 	case "reset":
-		// reset <watchdogId>
+		// moni reset <watchdogId>
 		watchdogId := flag.Arg(1)
 		err := retry(func() error {
 			return api.PostWatchdogReset(watchdogId)
@@ -195,14 +199,14 @@ func main() {
 			fatal(1, "%s", err)
 		}
 	case "machines":
-		// machines
+		// moni machines
 		machines, err := api.GetMachines()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
 		printMachines(machines)
 	case "machine":
-		// machine <machineId>
+		// moni machine <machineId>
 		machineId := flag.Arg(1)
 		if machineId == "" {
 			fatal(2, "empty machineId")
@@ -213,7 +217,7 @@ func main() {
 		}
 		printMachines([]monibot.Machine{machine})
 	case "sample":
-		// sample <machineId> [interval]
+		// moni sample <machineId> [interval]
 		machineId := flag.Arg(1)
 		if machineId == "" {
 			fatal(2, "empty machineId")
@@ -233,14 +237,14 @@ func main() {
 			fatal(1, "%s", err)
 		}
 	case "metrics":
-		// metrics
+		// moni metrics
 		metrics, err := api.GetMetrics()
 		if err != nil {
 			fatal(1, "%s", err)
 		}
 		printMetrics(metrics)
 	case "metric":
-		// metric <metricId>
+		// moni metric <metricId>
 		metricId := flag.Arg(1)
 		if metricId == "" {
 			fatal(2, "empty metricId")
@@ -251,7 +255,7 @@ func main() {
 		}
 		printMetrics([]monibot.Metric{metric})
 	case "inc":
-		// inc <metricId> <value>
+		// moni inc <metricId> <value>
 		metricId := flag.Arg(1)
 		if metricId == "" {
 			fatal(2, "empty metricId")
@@ -271,7 +275,7 @@ func main() {
 			fatal(1, "%s", err)
 		}
 	case "set":
-		// inc <metricId> <value>
+		// moni set <metricId> <value>
 		metricId := flag.Arg(1)
 		if metricId == "" {
 			fatal(2, "empty metricId")

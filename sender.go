@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
-	"time"
 )
 
 // A Sender sends HTTP requests and receives HTTP responses.
@@ -19,36 +17,42 @@ type Sender interface {
 	Send(ctx context.Context, method, path string, body []byte) ([]byte, error)
 }
 
+// SenderOptions holds optional parameters for a Sender.
+type SenderOptions struct {
+
+	// Default logs nothing.
+	Logger Logger
+
+	// Default is "https://monibot.io".
+	MonibotUrl string
+}
+
 // httpSender is a Sender that uses HTTP for sending API requests.
 type httpSender struct {
-	logger    Logger
-	apiUrl    string
-	userAgent string
-	apiKey    string
+	logger Logger
+	apiUrl string
+	apiKey string
 }
 
 var _ Sender = (*httpSender)(nil)
 
 // NewSender creates a new Senderthat sends api requests to https://monibot.io.
 func NewSender(apiKey string) Sender {
-	return NewSenderWithOptions(nil, "", "", apiKey)
+	return NewSenderWithOptions(apiKey, SenderOptions{})
 }
 
 // NewSenderWithOptions creates a new Sender.
 // If logger is nil, it logs nothing.
 // If monibotUrl is empty, it sends api requests to https://monibot.io.
 // If userAgent is empty, it uses "monibot/v0.0.0" (whatever the current version is).
-func NewSenderWithOptions(logger Logger, monibotUrl, userAgent, apiKey string) Sender {
-	if logger == nil {
-		logger = NewDiscardLogger()
+func NewSenderWithOptions(apiKey string, opt SenderOptions) Sender {
+	if opt.Logger == nil {
+		opt.Logger = NewDiscardLogger()
 	}
-	if monibotUrl == "" {
-		monibotUrl = "https://monibot.io"
+	if opt.MonibotUrl == "" {
+		opt.MonibotUrl = "https://monibot.io"
 	}
-	if userAgent == "" {
-		userAgent = "monibot/" + Version
-	}
-	return &httpSender{logger, monibotUrl + "/api/", userAgent, apiKey}
+	return &httpSender{opt.Logger, opt.MonibotUrl + "/api/", apiKey}
 }
 
 // Send sends a HTTP request.
@@ -68,10 +72,7 @@ func (s *httpSender) Send(ctx context.Context, method, path string, body []byte)
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-	req.Header.Set("User-Agent", s.userAgent)
-	req.Header.Set("X-Monibot-Client", "monibot-go")
-	req.Header.Set("X-Monibot-Version", Version)
-	req.Header.Set("X-Monibot-TstampMillis", strconv.FormatInt(time.Now().UnixMilli(), 10))
+	req.Header.Set("User-Agent", "monibot/v"+Version)
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
