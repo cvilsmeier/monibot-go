@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // Api provides access to the Monibot REST API.
@@ -116,18 +117,22 @@ func (a *Api) GetMachineWithContext(ctx context.Context, machineId string) (Mach
 }
 
 // PostMachineSample wraps PostMachineSampleWithContext using context.Background.
-func (a *Api) PostMachineSample(machineId string, tstamp int64, cpu, mem, disk int) error {
-	return a.PostMachineSampleWithContext(context.Background(), machineId, tstamp, cpu, mem, disk)
+func (a *Api) PostMachineSample(machineId string, sample MachineSample) error {
+	return a.PostMachineSampleWithContext(context.Background(), machineId, sample)
 }
 
-// PostMachineSample calls the /machine/:id/sample endpoint.
-// It is used to upload a cpu/mem/disk usage sample.
-// The tstamp parameter is the number of milliseconds since
-// 1970-01-01T00:00:00Z, always UTC, never local time.
-// The cpu, mem and disk parameters are usage precentages between
-// 0 and 100 inclusively.
-func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string, tstamp int64, cpu, mem, disk int) error {
-	body := fmt.Sprintf("tstamp=%d&cpu=%d&mem=%d&disk=%d", tstamp, cpu, mem, disk)
+// PostMachineSample uploads a machine sample to the /machine/:id/sample endpoint.
+func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string, sample MachineSample) error {
+	toks := []string{
+		fmt.Sprintf("tstamp=%d", sample.Tstamp),
+		fmt.Sprintf("load1=%.3f", sample.Load1),
+		fmt.Sprintf("load5=%.3f", sample.Load5),
+		fmt.Sprintf("load15=%.3f", sample.Load15),
+		fmt.Sprintf("cpu=%d", sample.CpuPercent),
+		fmt.Sprintf("mem=%d", sample.MemPercent),
+		fmt.Sprintf("disk=%d", sample.DiskPercent),
+	}
+	body := strings.Join(toks, "&")
 	_, err := a.sender.Send(ctx, http.MethodPost, "machine/"+machineId+"/sample", []byte(body))
 	return err
 }

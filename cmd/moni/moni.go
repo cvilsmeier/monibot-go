@@ -7,14 +7,10 @@ It supports a number of commands. To get a list of supported commands, run
 package main
 
 import (
-	"bufio"
 	"flag"
-	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cvilsmeier/monibot-go"
@@ -29,9 +25,20 @@ const (
 	apiKeyFlag    = "apiKey"
 	defaultApiKey = ""
 
-	verboseEnvKey  = "MONIBOT_VERBOSE"
-	verboseFlag    = "v"
-	defaultVerbose = false
+	verboseEnvKey     = "MONIBOT_VERBOSE"
+	verboseFlag       = "v"
+	defaultVerbose    = false
+	defaultVerboseStr = "false"
+
+	trialsEnvKey     = "MONIBOT_TRIALS"
+	trialsFlag       = "trials"
+	defaultTrials    = 12
+	defaultTrialsStr = "12"
+
+	delayEnvKey     = "MONIBOT_DELAY"
+	delayFlag       = "delay"
+	defaultDelay    = 5 * time.Second
+	defaultDelayStr = "5s"
 )
 
 func usage() {
@@ -53,6 +60,14 @@ func usage() {
 	print("        Monibot API Key, default is %q.", defaultApiKey)
 	print("        You can set this also via environment variable %s.", apiKeyEnvKey)
 	print("        You can find your API Key in your profile on https://monibot.io.")
+	print("")
+	print("    -%s", trialsFlag)
+	print("        Max. Send trials, default is %d.", defaultTrials)
+	print("        You can set this also via environment variable %s.", trialsEnvKey)
+	print("")
+	print("    -%s", delayFlag)
+	print("        Delay between trials, default is %d.", defaultDelay)
+	print("        You can set this also via environment variable %s.", delayEnvKey)
 	print("")
 	print("    -%s", verboseFlag)
 	print("        Verbose output, default is %t.", defaultVerbose)
@@ -78,13 +93,8 @@ func usage() {
 	print("    machine <machineId>")
 	print("        Get machine by id.")
 	print("")
-	print("    sample <machineId> [interval]")
+	print("    sample <machineId>")
 	print("        Send resource usage (cpu/mem/disk) samples for machine.")
-	print("        This command will stay in background. It monitors resource usage")
-	print("        and sends it to monibot periodically, specified in interval.")
-	print("        The default interval is 5m. The interval may be lower, but")
-	print("        serve-side rate limits may apply.")
-	print("        The sample command currently works only on linux.")
 	print("")
 	print("    metrics")
 	print("        List metrics.")
@@ -99,6 +109,9 @@ func usage() {
 	print("    set <metricId> <value>")
 	print("        Set a Gauge metric.")
 	print("        Value must be a non-negative 64-bit integer value.")
+	print("")
+	print("    config")
+	print("        Show config.")
 	print("")
 	print("    version")
 	print("        Show program version.")
@@ -122,12 +135,32 @@ func main() {
 		url = defaultUrl
 	}
 	flag.StringVar(&url, urlFlag, url, "")
-	// -apiKey 0000000000
+	// -apiKey 007
 	apiKey := os.Getenv(apiKeyEnvKey)
 	if apiKey == "" {
 		apiKey = defaultApiKey
 	}
 	flag.StringVar(&apiKey, apiKeyFlag, apiKey, "")
+	// -trials 12
+	trialsStr := os.Getenv(trialsEnvKey)
+	if trialsStr == "" {
+		trialsStr = defaultTrialsStr
+	}
+	trials, err := strconv.Atoi(trialsStr)
+	if err != nil {
+		fatal(2, "cannot parse trials %q: %s", trialsStr, err)
+	}
+	flag.IntVar(&trials, trialsFlag, trials, "")
+	// -delay 5s
+	delayStr := os.Getenv(delayEnvKey)
+	if delayStr == "" {
+		delayStr = defaultDelayStr
+	}
+	delay, err := time.ParseDuration(delayStr)
+	if err != nil {
+		fatal(2, "cannot parse delay %q: %s", delayStr, err)
+	}
+	flag.DurationVar(&delay, delayFlag, delay, "")
 	// -v
 	verboseStr := os.Getenv(verboseEnvKey)
 	if verboseStr == "" {
@@ -144,6 +177,13 @@ func main() {
 	case "", "help":
 		usage()
 		os.Exit(0)
+	case "config":
+		print("url      %v", url)
+		print("apiKey   %v", apiKey)
+		print("trials   %v", trials)
+		print("delay    %v", delay)
+		print("verbose  %v", verbose)
+		os.Exit(0)
 	case "version":
 		print("moni %s", monibot.Version)
 		os.Exit(0)
@@ -155,13 +195,26 @@ func main() {
 	if apiKey == "" {
 		fatal(2, "empty apiKey")
 	}
+	if trials < 0 {
+		fatal(2, "invalid trials: %d", trials)
+	}
+	if delay < 0 {
+		fatal(2, "invalid delay: %s", delay)
+	}
 	// init Sender and Api
 	logger := monibot.NewDiscardLogger()
 	if verbose {
 		logger = monibot.NewLogger(log.Default())
 	}
-	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{Logger: logger, MonibotUrl: url})
-	retrySender := monibot.NewRetrySenderWithOptions(sender, monibot.RetrySenderOptions{Logger: logger})
+	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{
+		Logger:     logger,
+		MonibotUrl: url,
+	})
+	retrySender := monibot.NewRetrySenderWithOptions(sender, monibot.RetrySenderOptions{
+		Logger: logger,
+		Trials: trials,
+		Delay:  delay,
+	})
 	api := monibot.NewApiWithSender(retrySender)
 	// execute API commands
 	switch command {
@@ -218,23 +271,17 @@ func main() {
 		}
 		printMachines([]monibot.Machine{machine})
 	case "sample":
-		// moni sample <machineId> [interval]
+		// moni sample <machineId>
 		machineId := flag.Arg(1)
 		if machineId == "" {
 			fatal(2, "empty machineId")
 		}
-		intervalStr := flag.Arg(2)
-		if intervalStr == "" {
-			intervalStr = "5m"
-		}
-		interval, err := time.ParseDuration(intervalStr)
+		sample, err := loadMachineSample()
 		if err != nil {
-			fatal(2, "cannot parse interval %q: %s", intervalStr, err)
+			fatal(1, "cannot loadMachineSample: %s", err)
 		}
-		if interval < 5*time.Second {
-			fatal(2, "interval must be >= 5s but was %s", interval)
-		}
-		if err := sampleMachine(logger, api, machineId, interval); err != nil {
+		err = api.PostMachineSample(machineId, sample)
+		if err != nil {
 			fatal(1, "%s", err)
 		}
 	case "metrics":
@@ -294,241 +341,4 @@ func main() {
 	default:
 		fatal(2, "unknown command %q, run 'moni help'", command)
 	}
-}
-
-// print prints a line to stdout.
-func print(f string, a ...any) {
-	fmt.Printf(f+"\n", a...)
-}
-
-// printWatchdogs prints watchdogs.
-func printWatchdogs(watchdogs []monibot.Watchdog) {
-	print("%-35s | %-25s | %s", "Id", "Name", "IntervalMillis")
-	for _, watchdog := range watchdogs {
-		print("%-35s | %-25s | %d", watchdog.Id, watchdog.Name, watchdog.IntervalMillis)
-	}
-}
-
-// printMachines prints machines.
-func printMachines(machines []monibot.Machine) {
-	print("%-35s | %s", "Id", "Name")
-	for _, machine := range machines {
-		print("%-35s | %s", machine.Id, machine.Name)
-	}
-}
-
-// printMetrics prints metrics.
-func printMetrics(metrics []monibot.Metric) {
-	print("%-35s | %-25s | %s", "Id", "Name", "Type")
-	for _, metric := range metrics {
-		print("%-35s | %-25s | %d", metric.Id, metric.Name, metric.Type)
-	}
-}
-
-// fatal prints a message to stdout and exits with exitCode.
-func fatal(exitCode int, f string, a ...any) {
-	fmt.Printf(f+"\n", a...)
-	os.Exit(exitCode)
-}
-
-// sampleMachine samples the local machine (cpu/mem/disk) in an endless loop.
-func sampleMachine(logger monibot.Logger, api *monibot.Api, machineId string, interval time.Duration) error {
-	_, err := api.GetMachine(machineId)
-	if err != nil {
-		return err
-	}
-	lastCpuStat, err := loadCpuStat(logger)
-	if err != nil {
-		return fmt.Errorf("cannot loadCpuStat: %s", err)
-	}
-	for {
-		logger.Debug("sleep %v", interval)
-		time.Sleep(interval)
-		// stat cpu
-		cpuStat, err := loadCpuStat(logger)
-		if err != nil {
-			log.Printf("ERROR: cannot loadCpuStat: %s", err)
-			continue
-		}
-		// stat mem
-		memStat, err := loadMemStat(logger)
-		if err != nil {
-			log.Printf("ERROR: cannot loadMemStat: %s", err)
-			continue
-		}
-		// stat disk
-		diskStat, err := loadDiskStat(logger)
-		if err != nil {
-			log.Printf("ERROR: cannot loadDiskStat: %s", err)
-			continue
-		}
-		// POST machine sample
-		diffCpuStat := cpuStat.minus(lastCpuStat)
-		lastCpuStat = cpuStat
-		err = api.PostMachineSample(
-			machineId,
-			time.Now().UnixMilli(),
-			diffCpuStat.percent(),
-			memStat.percent(),
-			diskStat.percent(),
-		)
-		if err != nil {
-			log.Printf("ERROR cannot PostMachineSample: %s", err)
-		}
-	}
-}
-
-// loadCpuStat loads cpu usage stat from /proc/stat.
-// TODO better switch to loadavg
-func loadCpuStat(logger monibot.Logger) (sampleStat, error) {
-	logger.Debug("loadCpuStat: read /proc/stat")
-	f, err := os.Open("/proc/stat")
-	if err != nil {
-		return sampleStat{}, err
-	}
-	defer f.Close()
-	sca := bufio.NewScanner(f)
-	for sca.Scan() {
-		line := trimText(sca.Text())
-		after, found := strings.CutPrefix(line, "cpu ")
-		if found {
-			logger.Debug("loadCpuStat: parse %q", line)
-			toks := strings.Split(after, " ")
-			if len(toks) < 5 {
-				return sampleStat{}, fmt.Errorf("want min 5 tokens in %q but was %d", line, len(toks))
-			}
-			nums := make([]int64, len(toks))
-			var total int64
-			for i := range toks {
-				n, err := strconv.ParseInt(toks[i], 10, 64)
-				if err != nil {
-					return sampleStat{}, fmt.Errorf("cannot parse toks[%d] %q from line %q: %s", i, toks[i], line, err)
-				}
-				nums[i] = n
-				total += n
-			}
-			idle := nums[3]
-			used := total - idle
-			logger.Debug("loadCpuStat: total=%d, used=%d", total, used)
-			return sampleStat{total, used}, nil
-		}
-	}
-	return sampleStat{}, fmt.Errorf("prefix 'cpu ' not found in /proc/stat")
-}
-
-// loadMemStat uses /usr/bin/free to load mem usage stat.
-func loadMemStat(logger monibot.Logger) (sampleStat, error) {
-	logger.Debug("loadMemStat: /usr/bin/free -k")
-	text, err := execCommand("/usr/bin/free", "-k")
-	if err != nil {
-		return sampleStat{}, err
-	}
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		line = trimText(line)
-		after, found := strings.CutPrefix(line, "Mem: ")
-		if found {
-			logger.Debug("loadMemStat: parse %q", line)
-			toks := strings.Split(after, " ")
-			if len(toks) < 3 {
-				return sampleStat{}, fmt.Errorf("want min 3 tokens int %q but was %d", line, len(toks))
-			}
-			total, err := strconv.ParseInt(toks[0], 10, 64)
-			if err != nil {
-				return sampleStat{}, fmt.Errorf("cannot parse toks[0] from %q: %s", line, err)
-			}
-			used, err := strconv.ParseInt(toks[1], 10, 64)
-			if err != nil {
-				return sampleStat{}, fmt.Errorf("cannot parse toks[1] from %q: %s", line, err)
-			}
-			logger.Debug("loadMemStat: total=%d, used=%d", total, used)
-			return sampleStat{total, used}, nil
-		}
-	}
-	return sampleStat{}, fmt.Errorf("prefix 'Mem: ' not found in output of /usr/bin/free")
-}
-
-// loadMemStat uses /usr/bin/df to load disk usage stat.
-func loadDiskStat(logger monibot.Logger) (sampleStat, error) {
-	logger.Debug("loadDiskStat: /usr/bin/df --exclude-type=tmpfs --total --output=source,size,used")
-	text, _ := execCommand("/usr/bin/df", "--exclude-type=tmpfs", "--total", "--output=source,size,used")
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		line = trimText(line)
-		after, found := strings.CutPrefix(line, "total ")
-		if found {
-			logger.Debug("loadDiskStat: parse %q", line)
-			toks := strings.Split(after, " ")
-			if len(toks) < 2 {
-				return sampleStat{}, fmt.Errorf("want 2 toks in %q but has only %d", line, len(toks))
-			}
-			size, err := strconv.ParseInt(toks[0], 10, 64)
-			if err != nil {
-				return sampleStat{}, fmt.Errorf("parse toks[0] %q from %q: %w", toks[0], line, err)
-			}
-			used, err := strconv.ParseInt(toks[1], 10, 64)
-			if err != nil {
-				return sampleStat{}, fmt.Errorf("parse toks[1] %q from %q: %w", toks[1], line, err)
-			}
-			logger.Debug("loadDiskStat: size=%d, used=%d", size, used)
-			return sampleStat{size, used}, nil
-		}
-	}
-	return sampleStat{}, fmt.Errorf("'total' line not found in df output")
-}
-
-// execCommand executes an external binary.
-func execCommand(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
-	cmd.WaitDelay = 10 * time.Second
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		err = fmt.Errorf("cannot run %s: %w", name, err)
-	}
-	return string(out), err
-}
-
-// trimText trims and normalizes a line of text.
-func trimText(s string) string {
-	s = replace(s, "\t", " ")
-	s = replace(s, "\r", "")
-	s = replace(s, "\n", "")
-	s = replace(s, "  ", " ")
-	return strings.TrimSpace(s)
-}
-
-func replace(str, old, new string) string {
-	for strings.Contains(str, old) {
-		str = strings.ReplaceAll(str, old, new)
-	}
-	return str
-}
-
-// A sampleStat holds cpu/mem/disk usage data.
-type sampleStat struct {
-	total int64
-	used  int64
-}
-
-// minus calculates s minus o.
-func (s sampleStat) minus(o sampleStat) sampleStat {
-	return sampleStat{
-		s.total - o.total,
-		s.used - o.used,
-	}
-}
-
-// percent calculates usage percent and returns a number between 0 and 100 (inclusive).
-func (s sampleStat) percent() int {
-	if s.total == 0 {
-		return 0
-	}
-	p := (s.used * 100) / s.total
-	if p < 0 {
-		p = 0
-	}
-	if p > 100 {
-		p = 100
-	}
-	return int(p)
 }
