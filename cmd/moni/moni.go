@@ -84,8 +84,11 @@ func usage() {
 	print("    watchdog <watchdogId>")
 	print("        Get watchdog by id.")
 	print("")
-	print("    reset <watchdogId>")
+	print("    reset <watchdogId> [interval]")
 	print("        Reset a watchdog.")
+	print("        If interval is specified, moni will keep sending heartbeats")
+	print("        in the background. Min. interval is 1m. If interval is left")
+	print("        out, moni will send one heartbeat and then exit.")
 	print("")
 	print("    machines")
 	print("        List machines.")
@@ -93,8 +96,11 @@ func usage() {
 	print("    machine <machineId>")
 	print("        Get machine by id.")
 	print("")
-	print("    sample <machineId>")
+	print("    sample <machineId> [interval]")
 	print("        Send resource usage (cpu/mem/disk) samples for machine.")
+	print("        If interval is specified, moni will keep sampling in")
+	print("        the background. Min. interval is 1m. If interval is left")
+	print("        out, moni will send one sample and then exit.")
 	print("")
 	print("    metrics")
 	print("        List metrics.")
@@ -201,7 +207,7 @@ func main() {
 	if delay < 0 {
 		fatal(2, "invalid delay: %s", delay)
 	}
-	// init Sender and Api
+	// init monibot Api
 	logger := monibot.NewDiscardLogger()
 	if verbose {
 		logger = monibot.NewLogger(log.Default())
@@ -243,14 +249,38 @@ func main() {
 		}
 		printWatchdogs([]monibot.Watchdog{watchdog})
 	case "reset":
-		// moni reset <watchdogId>
+		// moni reset <watchdogId> [interval]
 		watchdogId := flag.Arg(1)
 		if watchdogId == "" {
 			fatal(2, "empty watchdogId")
 		}
-		err := api.PostWatchdogReset(watchdogId)
-		if err != nil {
-			fatal(1, "%s", err)
+		var interval time.Duration
+		intervalStr := flag.Arg(2)
+		if intervalStr != "" {
+			interval, err = time.ParseDuration(intervalStr)
+			if err != nil {
+				fatal(2, "cannot parse interval %q: %s", intervalStr, err)
+			}
+			if interval < 1*time.Minute {
+				fatal(2, "invalid interval %s: must be >= 1m", interval)
+			}
+		}
+		if interval == 0 {
+			err := api.PostWatchdogReset(watchdogId)
+			if err != nil {
+				fatal(1, "%s", err)
+			}
+		} else {
+			logger.Debug("will send heartbeats in background")
+			for {
+				// send
+				err := api.PostWatchdogReset(watchdogId)
+				if err != nil {
+					print("WARNING: cannot POST heartbeat: %s", err)
+				}
+				// sleep
+				time.Sleep(interval)
+			}
 		}
 	case "machines":
 		// moni machines
@@ -271,18 +301,48 @@ func main() {
 		}
 		printMachines([]monibot.Machine{machine})
 	case "sample":
-		// moni sample <machineId>
+		// moni sample <machineId> [interval]
 		machineId := flag.Arg(1)
 		if machineId == "" {
 			fatal(2, "empty machineId")
 		}
-		sample, err := loadMachineSample()
-		if err != nil {
-			fatal(1, "cannot loadMachineSample: %s", err)
+		var interval time.Duration
+		intervalStr := flag.Arg(2)
+		if intervalStr != "" {
+			interval, err = time.ParseDuration(intervalStr)
+			if err != nil {
+				fatal(2, "cannot parse interval %q: %s", intervalStr, err)
+			}
+			if interval < 1*time.Minute {
+				fatal(2, "invalid interval %s: must be >= 1m", interval)
+			}
 		}
-		err = api.PostMachineSample(machineId, sample)
-		if err != nil {
-			fatal(1, "%s", err)
+		sampler := newSampler()
+		if interval == 0 {
+			logger.Debug("fetching sample")
+			sample, err := sampler.sample()
+			if err != nil {
+				fatal(1, "cannot sample: %s", err)
+			}
+			err = api.PostMachineSample(machineId, sample)
+			if err != nil {
+				fatal(1, "%s", err)
+			}
+		} else {
+			logger.Debug("will send samples in background")
+			for {
+				// sample
+				sample, err := sampler.sample()
+				if err != nil {
+					print("WARNING: cannot sample: %s", err)
+				}
+				err = api.PostMachineSample(machineId, sample)
+				if err != nil {
+					print("WARNING: cannot POST sample: %s", err)
+				}
+				// sleep
+				time.Sleep(interval)
+			}
 		}
 	case "metrics":
 		// moni metrics

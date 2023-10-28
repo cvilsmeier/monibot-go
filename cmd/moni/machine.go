@@ -11,8 +11,16 @@ import (
 	"github.com/cvilsmeier/monibot-go"
 )
 
-// loadMachineSample loads a MachineSample for the current cpu/mem/disk usage.
-func loadMachineSample() (monibot.MachineSample, error) {
+type sampler struct {
+	lastStat cpuStat
+}
+
+func newSampler() *sampler {
+	return &sampler{}
+}
+
+// sample calculates a MachineSample for the current resource usage.
+func (s *sampler) sample() (monibot.MachineSample, error) {
 	var sample monibot.MachineSample
 	// load loadavg
 	loadAvg, err := loadLoadAvg()
@@ -23,10 +31,11 @@ func loadMachineSample() (monibot.MachineSample, error) {
 	sample.Load5 = loadAvg[1]
 	sample.Load15 = loadAvg[2]
 	// cpu
-	cpuPercent, err := loadCpuPercent(5 * time.Second)
+	cpuPercent, stat, err := loadCpuPercent(s.lastStat)
 	if err != nil {
 		return sample, fmt.Errorf("cannot loadCpuPercent: %w", err)
 	}
+	s.lastStat = stat // remember stat for next time
 	sample.CpuPercent = cpuPercent
 	// mem
 	memPercent, err := loadMemPercent()
@@ -185,23 +194,28 @@ func parseDiskPercent(text string) (int, error) {
 // loadCpuPercent loads current cpu usage percent.
 // It reads /proc/stat, waits a bit, then reads /proc/stat again.
 // Then it calculates CPU usage percent between first and second read.
-func loadCpuPercent(delay time.Duration) (int, error) {
+func loadCpuPercent(lastStat cpuStat) (int, cpuStat, error) {
+	if lastStat.isZero() {
+		// load /proc/stat
+		stat, err := loadCpuStat()
+		if err != nil {
+			return 0, stat, fmt.Errorf("cannot loadCpuStat: %w", err)
+		}
+		lastStat = stat
+		// wait a bit
+		time.Sleep(5 * time.Second)
+	}
 	// load /proc/stat
-	stat1, err := loadCpuStat()
+	stat, err := loadCpuStat()
 	if err != nil {
-		return 0, fmt.Errorf("cannot loadCpuStat: %w", err)
+		return 0, stat, fmt.Errorf("cannot loadCpuStat: %w", err)
 	}
-	// delay
-	time.Sleep(delay)
-	// load /proc/stat again
-	stat2, err := loadCpuStat()
-	if err != nil {
-		return 0, fmt.Errorf("cannot loadCpuStat: %w", err)
-	}
-	total := stat2.total - stat1.total
-	idle := stat2.idle - stat1.idle
+	// calc percent
+	total := stat.total - lastStat.total
+	idle := stat.idle - lastStat.idle
 	used := total - idle
-	return percentOf(float64(used), float64(total)), nil
+	percent := percentOf(float64(used), float64(total))
+	return percent, stat, nil
 }
 
 func loadCpuStat() (cpuStat, error) {
@@ -254,6 +268,10 @@ func parseCpuStat(text string) (cpuStat, error) {
 type cpuStat struct {
 	total int64
 	idle  int64
+}
+
+func (s cpuStat) isZero() bool {
+	return s.total == 0 && s.idle == 0
 }
 
 // percentOf calculates percentage of used compared to total.
