@@ -1,18 +1,8 @@
 # monibot-go
 
-Golang SDK and CLI for <https://monibot.io>.
+Golang SDK and CLI tool for <https://monibot.io>.
 
 PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for details.
-
-## CLI Usage
-
-Build from source, needs Go. See also <https://go.dev>.
-
-    $ go install github.com/cvilsmeier/monibot-go/cmd/moni@latest
-
-Show help page with the following command:
-
-    $ moni help
 
 ## SDK Usage
 
@@ -33,10 +23,22 @@ func main() {
 }
 ```
 
+## CLI Usage
+
+Build from source, needs Go. See also <https://go.dev>.
+
+    $ go install github.com/cvilsmeier/monibot-go/cmd/moni@latest
+
+Show help page with the following command:
+
+    $ moni help
+
+
 ## Changelog
 
 See CHANGELOG.md
 
+
 ## License
 
-MIT license
+MIT License, see LICENSE

@@ -36,7 +36,7 @@ type httpSender struct {
 
 var _ Sender = (*httpSender)(nil)
 
-// NewSender creates a new Senderthat sends api requests to https://monibot.io.
+// NewSender creates a new Sender that sends api requests to https://monibot.io.
 func NewSender(apiKey string) Sender {
 	return NewSenderWithOptions(apiKey, SenderOptions{})
 }
@@ -72,7 +72,7 @@ func (s *httpSender) Send(ctx context.Context, method, path string, body []byte)
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-	req.Header.Set("User-Agent", "monibot/v"+Version)
+	req.Header.Set("User-Agent", "monibot/"+Version)
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
