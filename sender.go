@@ -44,7 +44,7 @@ func NewSender(apiKey string) Sender {
 // NewSenderWithOptions creates a new Sender.
 // If logger is nil, it logs nothing.
 // If monibotUrl is empty, it sends api requests to https://monibot.io.
-// If userAgent is empty, it uses "monibot/v0.0.0" (whatever the current version is).
+// If userAgent is empty, it uses "monibot/vX.X.X" (whatever the current version is).
 func NewSenderWithOptions(apiKey string, opt SenderOptions) Sender {
 	if opt.Logger == nil {
 		opt.Logger = NewDiscardLogger()
