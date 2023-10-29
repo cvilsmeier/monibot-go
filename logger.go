@@ -11,8 +11,8 @@ type Logger interface {
 	Debug(format string, args ...any)
 }
 
-// NewLogger creates a new Logger that logs to a log.Logger.
-func NewLogger(out *log.Logger) Logger {
+// NewLogLogger creates a new Logger that logs to a log.Logger.
+func NewLogLogger(out *log.Logger) Logger {
 	return &logLogger{out}
 }
 

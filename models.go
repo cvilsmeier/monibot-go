@@ -16,7 +16,7 @@ type Machine struct {
 // A MachineSample holds data for a machine resource usage sample.
 type MachineSample struct {
 
-	// Unix time millis since 1970-01-01T00:00:00Z
+	// Unix time millis since 1970-01-01T00:00:00Z, always UTC, never local time.
 	Tstamp int64
 
 	// Loadavg 1 minute

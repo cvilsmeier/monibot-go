@@ -210,7 +210,7 @@ func main() {
 	// init monibot Api
 	logger := monibot.NewDiscardLogger()
 	if verbose {
-		logger = monibot.NewLogger(log.Default())
+		logger = monibot.NewLogLogger(log.Default())
 	}
 	sender := monibot.NewSenderWithOptions(apiKey, monibot.SenderOptions{
 		Logger:     logger,

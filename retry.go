@@ -59,13 +59,17 @@ func NewRetrySenderWithOptions(sender Sender, opt RetrySenderOptions) *RetrySend
 }
 
 func (s *RetrySender) Send(ctx context.Context, method, path string, body []byte) ([]byte, error) {
-	// first trial, for sure
+	// first trial, always
 	s.logger.Debug("trial #1 for %s %s", method, path)
 	data, err := s.sender.Send(ctx, method, path, body)
 	if err == nil {
 		return data, err
 	}
-	// we have to retry again later
+	// we have to retry again and again
+	// TODO: if we know that the error will be persistent on retries,
+	// for instance because the user wants to reset a non-existing
+	// watchdog, or wants to increment a non-counter metric, we might
+	// as well bail out and return early.
 	for i := 1; i < s.trials; i++ {
 		select {
 		case <-s.timeAfter(s.delay):
