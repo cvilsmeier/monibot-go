@@ -107,7 +107,7 @@ func TestApi(t *testing.T) {
 	{
 		sender.requests = nil
 		sender.responses = append(sender.responses, fakeResponse{})
-		tstamp := time.Date(2023, 10, 27, 10, 0, 0, 0, time.Local)
+		tstamp := time.Date(2023, 10, 27, 10, 0, 0, 0, time.UTC)
 		sample := MachineSample{
 			Tstamp:      tstamp.UnixMilli(),
 			Load1:       1.01,
@@ -120,7 +120,7 @@ func TestApi(t *testing.T) {
 		err := api.PostMachineSample("00000001", sample)
 		ass.Nil(err)
 		ass.Eq(1, len(sender.requests))
-		ass.Eq("POST machine/00000001/sample tstamp=1698393600000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12", sender.requests[0])
+		ass.Eq("POST machine/00000001/sample tstamp=1698400800000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12", sender.requests[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET metrics
