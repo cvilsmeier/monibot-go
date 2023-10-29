@@ -84,8 +84,8 @@ func usage() {
 	print("    watchdog <watchdogId>")
 	print("        Get watchdog by id.")
 	print("")
-	print("    reset <watchdogId> [interval]")
-	print("        Reset a watchdog.")
+	print("    heartbeat <watchdogId> [interval]")
+	print("        Send a heartbeat.")
 	print("        If interval is specified, moni will keep sending heartbeats")
 	print("        in the background. Min. interval is 1m. If interval is left")
 	print("        out, moni will send one heartbeat and then exit.")
@@ -248,8 +248,8 @@ func main() {
 			fatal(1, "%s", err)
 		}
 		printWatchdogs([]monibot.Watchdog{watchdog})
-	case "reset":
-		// moni reset <watchdogId> [interval]
+	case "heartbeat":
+		// moni heartbeat <watchdogId> [interval]
 		watchdogId := flag.Arg(1)
 		if watchdogId == "" {
 			fatal(2, "empty watchdogId")
@@ -266,7 +266,7 @@ func main() {
 			}
 		}
 		if interval == 0 {
-			err := api.PostWatchdogReset(watchdogId)
+			err := api.PostWatchdogHeartbeat(watchdogId)
 			if err != nil {
 				fatal(1, "%s", err)
 			}
@@ -274,7 +274,7 @@ func main() {
 			logger.Debug("will send heartbeats in background")
 			for {
 				// send
-				err := api.PostWatchdogReset(watchdogId)
+				err := api.PostWatchdogHeartbeat(watchdogId)
 				if err != nil {
 					print("WARNING: cannot POST heartbeat: %s", err)
 				}

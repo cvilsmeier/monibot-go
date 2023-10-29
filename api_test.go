@@ -64,14 +64,14 @@ func TestApi(t *testing.T) {
 		ass.Eq("GET watchdog/00000001", sender.requests[0])
 		ass.Eq(0, len(sender.responses))
 	}
-	// POST watchdog/00000001/reset
+	// POST watchdog/00000001/heartbeat
 	{
 		sender.requests = nil
 		sender.responses = append(sender.responses, fakeResponse{})
-		err := api.PostWatchdogReset("00000001")
+		err := api.PostWatchdogHeartbeat("00000001")
 		ass.Nil(err)
 		ass.Eq(1, len(sender.requests))
-		ass.Eq("POST watchdog/00000001/reset", sender.requests[0])
+		ass.Eq("POST watchdog/00000001/heartbeat", sender.requests[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET machines

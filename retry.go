@@ -67,9 +67,8 @@ func (s *RetrySender) Send(ctx context.Context, method, path string, body []byte
 	}
 	// we have to retry again and again
 	// TODO: if we know that the error will be persistent on retries,
-	// for instance because the user wants to reset a non-existing
-	// watchdog, or wants to increment a non-counter metric, we might
-	// as well bail out and return early.
+	// for instance because the user wants to increment a non-counter
+	// metric, we might as well bail out and return early.
 	for i := 1; i < s.trials; i++ {
 		select {
 		case <-s.timeAfter(s.delay):

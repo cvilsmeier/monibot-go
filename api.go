@@ -71,14 +71,14 @@ func (a *Api) GetWatchdogWithContext(ctx context.Context, watchdogId string) (Wa
 	return w, err
 }
 
-// PostWatchdogReset is like PostWatchdogResetWithContext using context.Background.
-func (a *Api) PostWatchdogReset(watchdogId string) error {
-	return a.PostWatchdogResetWithContext(context.Background(), watchdogId)
+// PostWatchdogHeartbeat is like PostWatchdogHeartbeatWithContext using context.Background.
+func (a *Api) PostWatchdogHeartbeat(watchdogId string) error {
+	return a.PostWatchdogHeartbeatWithContext(context.Background(), watchdogId)
 }
 
-// PostWatchdogResetWithContext resets a watchdog.
-func (a *Api) PostWatchdogResetWithContext(ctx context.Context, watchdogId string) error {
-	_, err := a.sender.Send(ctx, http.MethodPost, "watchdog/"+watchdogId+"/reset", nil)
+// PostWatchdogHeartbeatWithContext sends a watchdog heartbeat.
+func (a *Api) PostWatchdogHeartbeatWithContext(ctx context.Context, watchdogId string) error {
+	_, err := a.sender.Send(ctx, http.MethodPost, "watchdog/"+watchdogId+"/heartbeat", nil)
 	return err
 }
 
