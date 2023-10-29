@@ -1,5 +1,9 @@
 # monibot-go
 
+[![GoDoc Reference](https://godoc.org/github.com/cvilsmeier/monibot-go?status.svg)](http://godoc.org/github.com/cvilsmeier/monibot-go)
+[![Build Status](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Golang SDK and CLI tool for <https://monibot.io>.
 
 PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for details.
