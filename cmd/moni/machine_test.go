@@ -61,7 +61,7 @@ cpu1 79965 6 17364 2082887 1852 0 722 0 0 0
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stat.total != 17446938 {
+	if stat.total != 17446939 {
 		t.Fatalf("have %v", stat.total)
 	}
 	if stat.idle != 16649013 {

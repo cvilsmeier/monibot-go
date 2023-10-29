@@ -1,7 +1,6 @@
 package monibot
 
 import (
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -9,43 +8,42 @@ import (
 	"github.com/cvilsmeier/monibot-go/internal/assert"
 )
 
-func TestDemoForDoc(t *testing.T) {
+func TestExampleSnippets(t *testing.T) {
 	ass := assert.New(t)
-	// parse api_test.go
-	data, err := os.ReadFile("doc_test.go")
+	// parse example/main.go
+	data, err := os.ReadFile("example/main.go")
 	ass.Nil(err)
-	want, found := cutout(normalizeText(data), "// "+"demo-start", "// "+"demo-end")
+	want, found := cutout(normalizeText(string(data)), "func main() {", "}\n}")
 	ass.True(found)
-	want = strings.TrimSpace(replace(want, "\t", ""))
 	// parse README.md
-	data, err = os.ReadFile("README.md")
+	filename := "README.md"
+	data, err = os.ReadFile(filename)
 	ass.Nil(err)
-	have, found := cutout(normalizeText(data), "import \"github.com/cvilsmeier/monibot-go\"", "```")
+	have, found := cutout(normalizeText(string(data)), "func main() {", "}\n}")
 	ass.True(found)
-	have = strings.TrimSpace(replace(replace(have, "\t", ""), "    ", ""))
-	ass.Eq(want, have)
+	ass.Eq(filename+":"+want, filename+":"+have)
 	// parse doc.go
-	data, err = os.ReadFile("doc.go")
+	filename = "doc.go"
+	data, err = os.ReadFile(filename)
 	ass.Nil(err)
-	have, found = cutout(normalizeText(data), "import \"github.com/cvilsmeier/monibot-go\"", "Monibot monitors")
+	have, found = cutout(normalizeText(string(data)), "func main() {", "}\n}")
 	ass.True(found)
-	have = strings.TrimSpace(replace(replace(have, "\t", ""), "    ", ""))
-	ass.Eq(want, have)
+	ass.Eq(filename+":"+want, filename+":"+have)
 }
 
-func normalizeText(data []byte) string {
-	// remove tabs
-	s := replace(string(data), "\t", " ")
-	// remove space chains
+func normalizeText(s string) string {
+	s = replace(s, "\r", "")
+	s = replace(s, "\t", " ")
 	s = replace(s, "  ", " ")
-	// remove indentations
 	s = replace(s, "\n ", "\n")
-	return s
+	return strings.TrimSpace(s)
 }
 
 func replace(str, old, new string) string {
-	for strings.Contains(str, old) {
+	i := 0
+	for strings.Contains(str, old) && i < 1000 {
 		str = strings.ReplaceAll(str, old, new)
+		i++
 	}
 	return str
 }
@@ -61,24 +59,4 @@ func cutout(s, pre, post string) (string, bool) {
 		return "", false
 	}
 	return s[:i], true
-}
-
-// This code is only here to be copied into README.md and doc.go.
-// Do not execute.
-func DemoForDoc() {
-	// ensure it's never executed
-	if 2+2 > 1 {
-		panic("do not execute")
-	}
-	// import "github.com/cvilsmeier/monibot-go"
-	// demo-start
-	// init the api
-	apiKey := os.Getenv("MONIBOT_API_KEY")
-	api := NewApi(apiKey)
-	// reset a watchdog
-	err := api.PostWatchdogReset("2f5f6d47183fdf415a7476837351730c")
-	if err != nil {
-		log.Fatal(err)
-	}
-	// demo-end
 }

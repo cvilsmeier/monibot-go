@@ -4,18 +4,15 @@ see https://monibot.io for details.
 
 	import "github.com/cvilsmeier/monibot-go"
 
-	// init the api
-	apiKey := os.Getenv("MONIBOT_API_KEY")
-	api := NewApi(apiKey)
-	// reset a watchdog
-	err := api.PostWatchdogReset("2f5f6d47183fdf415a7476837351730c")
-	if err != nil {
-		log.Fatal(err)
+	func main() {
+		// init the api, take apiKey from environment
+		apiKey := os.Getenv("MONIBOT_API_KEY")
+		api := monibot.NewApi(apiKey)
+		// reset a watchdog by id
+		err := api.PostWatchdogReset("5f6d343f517715a471d8768730c3f2f4")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-
-Monibot monitors your web app and notifies you if something goes wrong.
-It monitors Site Reachability, SSL/TLS Certificates, Watchdog Heartbeats,
-Machine Resource Usage, Database Size, Number of newly registered users,
-Number of sold articles, Number of failed login attempts, and many more.
 */
 package monibot
