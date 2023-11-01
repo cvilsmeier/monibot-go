@@ -1,5 +1,5 @@
 # CHANGELOG
 
-## v0.0.3 - Unreleased
+## v0.0.4 - Unreleased
 
 - First version
