@@ -24,6 +24,3 @@ jobs:
       
       - name: go test
         run: go test ./...
-      
-      - name: go build moni
-        run: go build ./cmd/moni

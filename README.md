@@ -4,13 +4,14 @@
 [![Build Status](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Golang SDK and CLI tool for <https://monibot.io>.
+Golang SDK for https://monibot.io
 
-PLEASE NOTE: Monibot is still under development, visit <https://monibot.io> for details.
-
-## SDK Usage
+## Install
 
     $ go get github.com/cvilsmeier/monibot-go
+
+
+## Usage
 
 ```go
 import "github.com/cvilsmeier/monibot-go"
@@ -28,20 +29,15 @@ func main() {
 }
 ```
 
-## CLI Usage
-
-Build from source, needs Go. See also <https://go.dev>.
-
-    $ go install github.com/cvilsmeier/monibot-go/cmd/moni@latest
-
-Show help page with the following command:
-
-    $ moni help
-
-
 ## Changelog
 
-See CHANGELOG.md
+### v0.0.5
+
+- moved moni command line tool into own repo: https://github.com/cvilsmeier/moni
+
+### v0.0.4
+
+- first version
 
 
 ## License

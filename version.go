@@ -1,4 +1,4 @@
 package monibot
 
-// Version is the semver version of the monibot SDK.
-const Version = "v0.0.4"
+// Version is monibot-go sdk version.
+const Version = "v0.0.5"
