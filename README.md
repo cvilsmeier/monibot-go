@@ -31,6 +31,10 @@ func main() {
 
 ## Changelog
 
+### v0.0.6
+
+- added diskReads and diskWrites to machine sample
+
 ### v0.0.5
 
 - moved moni command line tool into own repo: https://github.com/cvilsmeier/moni

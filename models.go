@@ -19,23 +19,29 @@ type MachineSample struct {
 	// Unix time millis since 1970-01-01T00:00:00Z, always UTC, never local time.
 	Tstamp int64
 
-	// Loadavg 1 minute
+	// Loadavg 1 minute.
 	Load1 float64
 
-	// Loadavg 5 minutes
+	// Loadavg 5 minutes.
 	Load5 float64
 
-	// Loadavg 15 minutes
+	// Loadavg 15 minutes.
 	Load15 float64
 
-	// CPU usage percent 0..100
+	// CPU usage percent 0..100 since last sample.
 	CpuPercent int
 
-	// Memory usage percent 0..100
+	// Memory usage percent 0..100.
 	MemPercent int
 
-	// Disk usage percent 0..100
+	// Disk usage percent 0..100.
 	DiskPercent int
+
+	// Disk number of sectors read since last sample.
+	DiskReads int64
+
+	// Disk number of sectors written since last sample.
+	DiskWrites int64
 }
 
 // Metric holds data for a Metric.
