@@ -131,6 +131,8 @@ func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string
 		fmt.Sprintf("disk=%d", sample.DiskPercent),
 		fmt.Sprintf("diskReads=%d", sample.DiskReads),
 		fmt.Sprintf("diskWrites=%d", sample.DiskWrites),
+		fmt.Sprintf("netRecv=%d", sample.NetRecv),
+		fmt.Sprintf("netSend=%d", sample.NetSend),
 	}
 	body := strings.Join(toks, "&")
 	_, err := a.sender.Send(ctx, http.MethodPost, "machine/"+machineId+"/sample", []byte(body))

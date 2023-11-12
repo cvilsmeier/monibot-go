@@ -42,6 +42,12 @@ type MachineSample struct {
 
 	// Disk number of sectors written since last sample.
 	DiskWrites int64
+
+	// Network number of bytes received since last sample.
+	NetRecv int64
+
+	// Network number of bytes sent since last sample.
+	NetSend int64
 }
 
 // Metric holds data for a Metric.

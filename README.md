@@ -31,6 +31,10 @@ func main() {
 
 ## Changelog
 
+### v0.0.7
+
+- added netRecv and netSend to machine sample
+
 ### v0.0.6
 
 - added diskReads and diskWrites to machine sample
