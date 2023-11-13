@@ -73,14 +73,22 @@ func TestRetrySender(t *testing.T) {
 	ass.Nil(err)
 	ass.Eq("{\"ok\":true}", string(data))
 	transport.calls = nil
-	// must not retry if 404 (not found)
+	// must not retry if authorization error
+	transport.responses = []fakeResponse{
+		{401, []byte("401 - Unauthorized (invalid apiKey)"), nil},
+	}
+	_, err = sender.Send(context.Background(), "GET", "/ping", nil)
+	ass.Eq(1, len(transport.calls))
+	ass.Eq("GET /ping", transport.calls[0])
+	ass.Eq("status 401", err.Error())
+	transport.calls = nil
+	// must not retry if 404 (not found) but give error
 	transport.responses = []fakeResponse{
 		{404, nil, nil},
 	}
-	data, err = sender.Send(context.Background(), "GET", "/wrongUrl", nil)
+	_, err = sender.Send(context.Background(), "GET", "/wrongUrl", nil)
 	ass.Eq(1, len(transport.calls))
 	ass.Eq("GET /wrongUrl", transport.calls[0])
-	ass.Nil(err)
-	ass.Eq("", string(data))
+	ass.Eq("status 404", err.Error())
 	transport.calls = nil
 }

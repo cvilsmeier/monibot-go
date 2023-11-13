@@ -31,6 +31,10 @@ func main() {
 
 ## Changelog
 
+### v0.0.8
+
+- refactor
+
 ### v0.0.7
 
 - added netRecv and netSend to machine sample

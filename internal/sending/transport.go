@@ -6,18 +6,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/cvilsmeier/monibot-go/internal/logging"
 )
 
 type Transport struct {
-	logger  logging.Logger
+	logger  debugLogger
 	version string
 	apiUrl  string
 	apiKey  string
 }
 
-func NewTransport(logger logging.Logger, version, monibotUrl, apiKey string) *Transport {
+func NewTransport(logger debugLogger, version, monibotUrl, apiKey string) *Transport {
 	return &Transport{logger, version, monibotUrl + "/api/", apiKey}
 }
 

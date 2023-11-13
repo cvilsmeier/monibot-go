@@ -7,24 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvilsmeier/monibot-go/internal/logging"
 	"github.com/cvilsmeier/monibot-go/internal/sending"
-	"github.com/cvilsmeier/monibot-go/internal/version"
 )
-
-// A Logger prints debug messages.
-type Logger = logging.Logger
-
-// TimeAfterFunc is the function type of time.After.
-type TimeAfterFunc = sending.TimeAfterFunc
-
-// Version is monibot-go sdk version.
-const Version = version.Version
 
 // ApiOptions holds optional parameters for a Api.
 type ApiOptions struct {
 
-	// Default is no logging.
+	// Default is no logging. If you want debug logging: Bring your own logger.
 	Logger Logger
 
 	// Default is "https://monibot.io".
@@ -36,8 +25,8 @@ type ApiOptions struct {
 	// Default is 5s delay.
 	Delay time.Duration
 
-	// Default time.After
-	TimeAfter TimeAfterFunc
+	// Default is time.After (this is only used in tests and hence not exported).
+	timeAfter sending.TimeAfterFunc
 }
 
 // An apiSender provides a Send method and can be overridden in unit tests.
@@ -61,7 +50,7 @@ func NewApi(apiKey string) *Api {
 func NewApiWithOptions(apiKey string, opt ApiOptions) *Api {
 	logger := opt.Logger
 	if logger == nil {
-		logger = logging.NewDiscardLogger()
+		logger = zeroLogger{}
 	}
 	monibotUrl := opt.MonibotUrl
 	if monibotUrl == "" {
@@ -75,7 +64,7 @@ func NewApiWithOptions(apiKey string, opt ApiOptions) *Api {
 	if delay == 0 {
 		delay = 5 * time.Second
 	}
-	timeAfter := opt.TimeAfter
+	timeAfter := opt.timeAfter
 	if timeAfter == nil {
 		timeAfter = time.After
 	}

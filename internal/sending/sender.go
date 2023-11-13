@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/cvilsmeier/monibot-go/internal/logging"
 )
+
+// logger prints debug messages
+type debugLogger interface {
+	Debug(format string, args ...any)
+}
 
 // TimeAfterFunc is the function type of time.After.
 type TimeAfterFunc func(time.Duration) <-chan time.Time
@@ -17,13 +20,13 @@ type senderTransport interface {
 
 type Sender struct {
 	transport senderTransport
-	logger    logging.Logger
+	logger    debugLogger
 	trials    int
 	delay     time.Duration
 	timeAfter TimeAfterFunc
 }
 
-func NewSender(transport senderTransport, logger logging.Logger, trials int, delay time.Duration, timeAfter TimeAfterFunc) *Sender {
+func NewSender(transport senderTransport, logger debugLogger, trials int, delay time.Duration, timeAfter TimeAfterFunc) *Sender {
 	if trials < 1 {
 		trials = 1
 	}
@@ -41,7 +44,7 @@ func (s *Sender) Send(ctx context.Context, method, path string, body []byte) ([]
 		status, data, err := s.transport.Send(ctx, method, path, body)
 		done := isDone(status, err)
 		if done || trial >= s.trials {
-			if err == nil && !done {
+			if err == nil && status != 200 {
 				err = fmt.Errorf("status %d", status)
 			}
 			return data, err
@@ -58,7 +61,7 @@ func (s *Sender) Send(ctx context.Context, method, path string, body []byte) ([]
 func isDone(status int, err error) bool {
 	if err != nil {
 		// technical error
-		// -> retry
+		// -> not done, retry
 		return false
 	}
 	if status == 200 {
@@ -68,15 +71,15 @@ func isDone(status int, err error) bool {
 	}
 	if status == 429 {
 		// rate limit
-		// -> retry
+		// -> not done, retry
 		return false
 	}
 	if 400 <= status && status <= 499 {
-		// error in request data
+		// not found, wrong apiKey, etc.
 		// -> done, because next trial will probably bring the same result
 		return true
 	}
 	// other status code (5xx) (server maintenance, nginx bad gateway, ...)
-	// -> retry
+	// -> not done, retry
 	return false
 }
