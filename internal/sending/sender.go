@@ -45,7 +45,11 @@ func (s *Sender) Send(ctx context.Context, method, path string, body []byte) ([]
 		done := isDone(status, err)
 		if done || trial >= s.trials {
 			if err == nil && status != 200 {
-				err = fmt.Errorf("status %d", status)
+				msg := fmt.Sprintf("status %d", status)
+				if len(data) > 0 {
+					msg += ": " + string(data)
+				}
+				err = fmt.Errorf(msg)
 			}
 			return data, err
 		}

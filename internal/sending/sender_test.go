@@ -80,7 +80,7 @@ func TestRetrySender(t *testing.T) {
 	_, err = sender.Send(context.Background(), "GET", "/ping", nil)
 	ass.Eq(1, len(transport.calls))
 	ass.Eq("GET /ping", transport.calls[0])
-	ass.Eq("status 401", err.Error())
+	ass.Eq("status 401: 401 - Unauthorized (invalid apiKey)", err.Error())
 	transport.calls = nil
 	// must not retry if 404 (not found) but give error
 	transport.responses = []fakeResponse{
