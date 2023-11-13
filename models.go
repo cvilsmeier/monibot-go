@@ -37,16 +37,16 @@ type MachineSample struct {
 	// Disk usage percent 0..100.
 	DiskPercent int
 
-	// Disk number of sectors read since last sample.
+	// Number of disk sectors read since last sample.
 	DiskReads int64
 
-	// Disk number of sectors written since last sample.
+	// Number of disk sectors written since last sample.
 	DiskWrites int64
 
-	// Network number of bytes received since last sample.
+	// Number of network bytes received since last sample.
 	NetRecv int64
 
-	// Network number of bytes sent since last sample.
+	// Number of network bytes sent since last sample.
 	NetSend int64
 }
 

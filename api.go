@@ -4,24 +4,83 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
+	"time"
+
+	"github.com/cvilsmeier/monibot-go/internal/logging"
+	"github.com/cvilsmeier/monibot-go/internal/sending"
+	"github.com/cvilsmeier/monibot-go/internal/version"
 )
+
+// A Logger prints debug messages.
+type Logger = logging.Logger
+
+// TimeAfterFunc is the function type of time.After.
+type TimeAfterFunc = sending.TimeAfterFunc
+
+// Version is monibot-go sdk version.
+const Version = version.Version
+
+// ApiOptions holds optional parameters for a Api.
+type ApiOptions struct {
+
+	// Default is no logging.
+	Logger Logger
+
+	// Default is "https://monibot.io".
+	MonibotUrl string
+
+	// Default is 12 trials.
+	Trials int
+
+	// Default is 5s delay.
+	Delay time.Duration
+
+	// Default time.After
+	TimeAfter TimeAfterFunc
+}
+
+// An apiSender provides a Send method and can be overridden in unit tests.
+type apiSender interface {
+	Send(ctx context.Context, method, path string, body []byte) ([]byte, error)
+}
 
 // Api provides access to the Monibot REST API.
 type Api struct {
-	sender Sender
+	sender apiSender
 }
 
-// NewApi creates an Api that sends data to
-// https://monibot.io and retries 12 times every 5s if
-// an error occurs.
+// NewApi creates an Api that sends data to https://monibot.io
+// and retries 12 times every 5s if an error occurs,
+// and logs nothing.
 func NewApi(apiKey string) *Api {
-	return NewApiWithSender(NewRetrySender(NewSender(apiKey)))
+	return NewApiWithOptions(apiKey, ApiOptions{})
 }
 
-// NewApiWithSender creates an Api that uses a custom Sender for sending data.
-func NewApiWithSender(sender Sender) *Api {
+// NewApiWithOptions creates an Api with custom options.
+func NewApiWithOptions(apiKey string, opt ApiOptions) *Api {
+	logger := opt.Logger
+	if logger == nil {
+		logger = logging.NewDiscardLogger()
+	}
+	monibotUrl := opt.MonibotUrl
+	if monibotUrl == "" {
+		monibotUrl = "http://monibot.io"
+	}
+	trials := opt.Trials
+	if trials == 0 {
+		trials = 12
+	}
+	delay := opt.Delay
+	if delay == 0 {
+		delay = 5 * time.Second
+	}
+	timeAfter := opt.TimeAfter
+	if timeAfter == nil {
+		timeAfter = time.After
+	}
+	transport := sending.NewTransport(logger, Version, monibotUrl, apiKey)
+	sender := sending.NewSender(transport, logger, trials, delay, timeAfter)
 	return &Api{sender}
 }
 
@@ -35,7 +94,7 @@ func (a *Api) GetPing() error {
 // reachable. It returns nil on success or a non-nil error if
 // something goes wrong.
 func (a *Api) GetPingWithContext(ctx context.Context) error {
-	_, err := a.sender.Send(ctx, http.MethodGet, "ping", nil)
+	_, err := a.sender.Send(ctx, "GET", "ping", nil)
 	return err
 }
 
@@ -46,7 +105,7 @@ func (a *Api) GetWatchdogs() ([]Watchdog, error) {
 
 // GetWatchdogsWithContext fetches the list of watchdogs.
 func (a *Api) GetWatchdogsWithContext(ctx context.Context) ([]Watchdog, error) {
-	data, err := a.sender.Send(ctx, http.MethodGet, "watchdogs", nil)
+	data, err := a.sender.Send(ctx, "GET", "watchdogs", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +121,7 @@ func (a *Api) GetWatchdog(watchdogId string) (Watchdog, error) {
 
 // GetWatchdogWithContext fetches a watchdog by id.
 func (a *Api) GetWatchdogWithContext(ctx context.Context, watchdogId string) (Watchdog, error) {
-	data, err := a.sender.Send(ctx, http.MethodGet, "watchdog/"+watchdogId, nil)
+	data, err := a.sender.Send(ctx, "GET", "watchdog/"+watchdogId, nil)
 	if err != nil {
 		return Watchdog{}, err
 	}
@@ -78,7 +137,7 @@ func (a *Api) PostWatchdogHeartbeat(watchdogId string) error {
 
 // PostWatchdogHeartbeatWithContext sends a watchdog heartbeat.
 func (a *Api) PostWatchdogHeartbeatWithContext(ctx context.Context, watchdogId string) error {
-	_, err := a.sender.Send(ctx, http.MethodPost, "watchdog/"+watchdogId+"/heartbeat", nil)
+	_, err := a.sender.Send(ctx, "POST", "watchdog/"+watchdogId+"/heartbeat", nil)
 	return err
 }
 
@@ -89,7 +148,7 @@ func (a *Api) GetMachines() ([]Machine, error) {
 
 // GetMachinesWithContext fetches the list of machines.
 func (a *Api) GetMachinesWithContext(ctx context.Context) ([]Machine, error) {
-	data, err := a.sender.Send(ctx, http.MethodGet, "machines", nil)
+	data, err := a.sender.Send(ctx, "GET", "machines", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +164,7 @@ func (a *Api) GetMachine(machineId string) (Machine, error) {
 
 // GetMachineWithContext fetches a machine by id.
 func (a *Api) GetMachineWithContext(ctx context.Context, machineId string) (Machine, error) {
-	data, err := a.sender.Send(ctx, http.MethodGet, "machine/"+machineId, nil)
+	data, err := a.sender.Send(ctx, "GET", "machine/"+machineId, nil)
 	if err != nil {
 		return Machine{}, err
 	}
@@ -135,7 +194,7 @@ func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string
 		fmt.Sprintf("netSend=%d", sample.NetSend),
 	}
 	body := strings.Join(toks, "&")
-	_, err := a.sender.Send(ctx, http.MethodPost, "machine/"+machineId+"/sample", []byte(body))
+	_, err := a.sender.Send(ctx, "POST", "machine/"+machineId+"/sample", []byte(body))
 	return err
 }
 
@@ -146,7 +205,7 @@ func (a *Api) GetMetrics() ([]Metric, error) {
 
 // GetMetricsWithContext fetches the list of metrics.
 func (a *Api) GetMetricsWithContext(ctx context.Context) ([]Metric, error) {
-	data, err := a.sender.Send(ctx, http.MethodGet, "metrics", nil)
+	data, err := a.sender.Send(ctx, "GET", "metrics", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +221,7 @@ func (a *Api) GetMetric(metricId string) (Metric, error) {
 
 // GetMetricWithContext fetches a metric by id.
 func (a *Api) GetMetricWithContext(ctx context.Context, metricId string) (Metric, error) {
-	data, err := a.sender.Send(ctx, http.MethodGet, "metric/"+metricId, nil)
+	data, err := a.sender.Send(ctx, "GET", "metric/"+metricId, nil)
 	if err != nil {
 		return Metric{}, err
 	}
@@ -182,7 +241,7 @@ func (a *Api) PostMetricInc(metricId string, value int64) error {
 // The value is a non-negative int64 number.
 func (a *Api) PostMetricIncWithContext(ctx context.Context, metricId string, value int64) error {
 	body := fmt.Sprintf("value=%d", value)
-	_, err := a.sender.Send(ctx, http.MethodPost, "metric/"+metricId+"/inc", []byte(body))
+	_, err := a.sender.Send(ctx, "POST", "metric/"+metricId+"/inc", []byte(body))
 	return err
 }
 
@@ -197,6 +256,6 @@ func (a *Api) PostMetricSet(metricId string, value int64) error {
 // The value is a non-negative int64 number.
 func (a *Api) PostMetricSetWithContext(ctx context.Context, metricId string, value int64) error {
 	body := fmt.Sprintf("value=%d", value)
-	_, err := a.sender.Send(ctx, http.MethodPost, "metric/"+metricId+"/set", []byte(body))
+	_, err := a.sender.Send(ctx, "POST", "metric/"+metricId+"/set", []byte(body))
 	return err
 }

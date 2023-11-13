@@ -1,4 +1,4 @@
-package monibot
+package logging
 
 import (
 	"log"

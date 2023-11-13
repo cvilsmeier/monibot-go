@@ -1,7 +1,9 @@
 package monibot
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,20 +26,20 @@ func TestApi(t *testing.T) {
 	// this test uses a fake HTTP sender
 	sender := &fakeSender{}
 	// create Api
-	api := NewApiWithSender(sender)
+	api := &Api{sender}
 	// GET ping
 	{
-		sender.requests = nil
+		sender.calls = nil
 		sender.responses = append(sender.responses, fakeResponse{})
 		err := api.GetPing()
 		ass.Nil(err)
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET ping", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET ping", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET watchdogs
 	{
-		sender.requests = nil
+		sender.calls = nil
 		resp := `[
 			{"id":"0001", "name":"Cronjob 1", "intervalMillis": 72000000},
 			{"id":"0002", "name":"Cronjob 2", "intervalMillis": 36000000}
@@ -48,35 +50,35 @@ func TestApi(t *testing.T) {
 		ass.Eq(2, len(watchdogs))
 		ass.Eq("Id=0001, Name=Cronjob 1, IntervalMillis=72000000", str(watchdogs[0]))
 		ass.Eq("Id=0002, Name=Cronjob 2, IntervalMillis=36000000", str(watchdogs[1]))
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET watchdogs", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET watchdogs", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET watchdog/00000001
 	{
-		sender.requests = nil
+		sender.calls = nil
 		resp := `{"id":"0001", "name":"Cronjob 1", "intervalMillis": 72000000}`
 		sender.responses = append(sender.responses, fakeResponse{data: []byte(resp)})
 		watchdog, err := api.GetWatchdog("00000001")
 		ass.Nil(err)
 		ass.Eq("Id=0001, Name=Cronjob 1, IntervalMillis=72000000", str(watchdog))
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET watchdog/00000001", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET watchdog/00000001", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// POST watchdog/00000001/heartbeat
 	{
-		sender.requests = nil
+		sender.calls = nil
 		sender.responses = append(sender.responses, fakeResponse{})
 		err := api.PostWatchdogHeartbeat("00000001")
 		ass.Nil(err)
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("POST watchdog/00000001/heartbeat", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("POST watchdog/00000001/heartbeat", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET machines
 	{
-		sender.requests = nil
+		sender.calls = nil
 		resp := `[
 			{"id":"01", "name":"Server 1"},
 			{"id":"02", "name":"Server 2"}
@@ -87,25 +89,25 @@ func TestApi(t *testing.T) {
 		ass.Eq(2, len(machines))
 		ass.Eq("Id=01, Name=Server 1", str(machines[0]))
 		ass.Eq("Id=02, Name=Server 2", str(machines[1]))
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET machines", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET machines", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET machine/01
 	{
-		sender.requests = nil
+		sender.calls = nil
 		resp := `{"id":"01", "name":"Server 1"}`
 		sender.responses = append(sender.responses, fakeResponse{data: []byte(resp)})
 		machine, err := api.GetMachine("01")
 		ass.Nil(err)
 		ass.Eq("Id=01, Name=Server 1", str(machine))
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET machine/01", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET machine/01", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// POST machine/00000001/sample
 	{
-		sender.requests = nil
+		sender.calls = nil
 		sender.responses = append(sender.responses, fakeResponse{})
 		tstamp := time.Date(2023, 10, 27, 10, 0, 0, 0, time.UTC)
 		sample := MachineSample{
@@ -123,13 +125,13 @@ func TestApi(t *testing.T) {
 		}
 		err := api.PostMachineSample("00000001", sample)
 		ass.Nil(err)
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("POST machine/00000001/sample tstamp=1698400800000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12&diskReads=678&diskWrites=567&netRecv=13&netSend=14", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("POST machine/00000001/sample tstamp=1698400800000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12&diskReads=678&diskWrites=567&netRecv=13&netSend=14", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET metrics
 	{
-		sender.requests = nil
+		sender.calls = nil
 		resp := `[
 			{"id":"01", "name":"Metric 1", "type": 0},
 			{"id":"02", "name":"Metric 2", "type": 1}
@@ -140,30 +142,51 @@ func TestApi(t *testing.T) {
 		ass.Eq(2, len(metrics))
 		ass.Eq("Id=01, Name=Metric 1, Type=0", str(metrics[0]))
 		ass.Eq("Id=02, Name=Metric 2, Type=1", str(metrics[1]))
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET metrics", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET metrics", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// GET metric/01
 	{
-		sender.requests = nil
+		sender.calls = nil
 		resp := `{"id":"01", "name":"Metric 1", "type": 0}`
 		sender.responses = append(sender.responses, fakeResponse{data: []byte(resp)})
 		metric, err := api.GetMetric("01")
 		ass.Nil(err)
 		ass.Eq("Id=01, Name=Metric 1, Type=0", str(metric))
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("GET metric/01", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("GET metric/01", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// POST metric/00000001/inc
 	{
-		sender.requests = nil
+		sender.calls = nil
 		sender.responses = append(sender.responses, fakeResponse{nil, fmt.Errorf("connect timeout")})
 		err := api.PostMetricInc("00000001", 42)
 		ass.Eq("connect timeout", err.Error())
-		ass.Eq(1, len(sender.requests))
-		ass.Eq("POST metric/00000001/inc value=42", sender.requests[0])
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("POST metric/00000001/inc value=42", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
+}
+
+type fakeSender struct {
+	calls     []string
+	responses []fakeResponse
+}
+
+func (f *fakeSender) Send(ctx context.Context, method, path string, body []byte) ([]byte, error) {
+	call := strings.TrimSpace(method + " " + path + " " + string(body))
+	f.calls = append(f.calls, call)
+	if len(f.responses) == 0 {
+		return nil, fmt.Errorf("no response for %s %s", method, path)
+	}
+	re := f.responses[0]
+	f.responses = f.responses[1:]
+	return re.data, re.err
+}
+
+type fakeResponse struct {
+	data []byte
+	err  error
 }
