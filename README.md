@@ -4,14 +4,16 @@
 [![Build Status](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Golang SDK for https://monibot.io
+Golang SDK for https://monibot.io - Web App Monitoring for Developers.
 
-## Install
-
-    $ go get github.com/cvilsmeier/monibot-go
+This module provides a SDK to interact with the Monibot REST API.
+Monibot is a service that monitors your web apps, servers and
+metrics, and notifies you if something goes wrong.
 
 
 ## Usage
+
+    $ go get github.com/cvilsmeier/monibot-go
 
 ```go
 import "github.com/cvilsmeier/monibot-go"
@@ -22,18 +24,18 @@ func main() {
 	// create new api
 	api := monibot.NewApi(apiKey)
 	// send a watchdog heartbeat
-	err := api.PostWatchdogHeartbeat("5f6d343a471d87687f51771530c3f2f4")
-	if err != nil {
-		log.Fatal(err)
-	}
+	api.PostWatchdogHeartbeat("5f6d343a471d87687f51771530c3f2f4")
+	// increment a counter metric
+	api.PostMetricInc("c3f2fefae7f6d3e387f1d8761ff17730", 42)
 }
 ```
+
 
 ## Changelog
 
 ### v0.0.8
 
-- refactor
+- fix disk/net usage samples
 
 ### v0.0.7
 
