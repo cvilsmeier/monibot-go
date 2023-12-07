@@ -4,7 +4,7 @@
 [![Build Status](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Golang SDK for https://monibot.io - Web App Monitoring for Developers.
+Golang SDK for https://monibot.io - Easy Server and Application Monitoring.
 
 This module provides a SDK to interact with the Monibot REST API.
 Monibot is a service that monitors your web apps, servers and
