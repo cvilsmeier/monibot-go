@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -184,6 +185,18 @@ func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string
 	}
 	body := strings.Join(toks, "&")
 	_, err := a.sender.Send(ctx, "POST", "machine/"+machineId+"/sample", []byte(body))
+	return err
+}
+
+// PostMachineText is like PostMachineTextWithContext using context.Background.
+func (a *Api) PostMachineText(machineId string, text string) error {
+	return a.PostMachineTextWithContext(context.Background(), machineId, text)
+}
+
+// PostMachineTextWithContext uploads a machine text to the API.
+func (a *Api) PostMachineTextWithContext(ctx context.Context, machineId string, text string) error {
+	body := "text=" + url.QueryEscape(text)
+	_, err := a.sender.Send(ctx, "POST", "machine/"+machineId+"/text", []byte(body))
 	return err
 }
 

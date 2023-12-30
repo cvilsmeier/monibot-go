@@ -33,6 +33,10 @@ func main() {
 
 ## Changelog
 
+### v0.0.9
+
+- add machine text
+
 ### v0.0.8
 
 - fix disk/net usage samples

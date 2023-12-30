@@ -64,7 +64,7 @@ func (s *Sender) Send(ctx context.Context, method, path string, body []byte) ([]
 
 func isDone(status int, err error) bool {
 	if err != nil {
-		// technical error
+		// newtwork error, e.g. connect failed
 		// -> not done, retry
 		return false
 	}
@@ -79,11 +79,11 @@ func isDone(status int, err error) bool {
 		return false
 	}
 	if 400 <= status && status <= 499 {
-		// not found, wrong apiKey, etc.
+		// not found, wrong apiKey, bad request, etc.
 		// -> done, because next trial will probably bring the same result
 		return true
 	}
-	// other status code (5xx) (server maintenance, nginx bad gateway, ...)
+	// other status code (5xx) (server maintenance, bad gateway, internal server error...)
 	// -> not done, retry
 	return false
 }

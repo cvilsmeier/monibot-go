@@ -129,6 +129,17 @@ func TestApi(t *testing.T) {
 		ass.Eq("POST machine/00000001/sample tstamp=1698400800000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12&diskReads=678&diskWrites=567&netRecv=13&netSend=14", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
+	// POST machine/00000001/text
+	{
+		sender.calls = nil
+		sender.responses = append(sender.responses, fakeResponse{})
+		text := "line1\nline2\n\n"
+		err := api.PostMachineText("00000001", text)
+		ass.Nil(err)
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("POST machine/00000001/text text=line1%0Aline2%0A%0A", sender.calls[0])
+		ass.Eq(0, len(sender.responses))
+	}
 	// GET metrics
 	{
 		sender.calls = nil
