@@ -179,6 +179,27 @@ func TestApi(t *testing.T) {
 		ass.Eq("POST metric/00000001/inc value=42", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
+	// POST metric/00000001/set
+	{
+		sender.calls = nil
+		sender.responses = append(sender.responses, fakeResponse{nil, fmt.Errorf("connect timeout")})
+		err := api.PostMetricSet("00000001", 113)
+		ass.Eq("connect timeout", err.Error())
+		ass.Eq(1, len(sender.calls))
+		ass.Eq("POST metric/00000001/set value=113", sender.calls[0])
+		ass.Eq(0, len(sender.responses))
+	}
+	// POST metric/00000042/values
+	{
+		sender.calls = nil
+		sender.responses = append(sender.responses, fakeResponse{nil, fmt.Errorf("connect timeout")})
+		err := api.PostMetricValues("010101", []int64{3, 5, 2, 5, 0, 3, 4, 3, 1})
+		ass.Eq("connect timeout", err.Error())
+		ass.Eq(1, len(sender.calls))
+		// "0%2C1%2C2%2C3%3A3%2C4%2C5%3A2" = urlEncode("0,1,2,3:3,4,5:2")
+		ass.Eq("POST metric/010101/values values=0%2C1%2C2%2C3%3A3%2C4%2C5%3A2", sender.calls[0])
+		ass.Eq(0, len(sender.responses))
+	}
 }
 
 type fakeSender struct {

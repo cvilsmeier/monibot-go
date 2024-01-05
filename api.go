@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cvilsmeier/monibot-go/internal/histogram"
 	"github.com/cvilsmeier/monibot-go/internal/sending"
 )
 
@@ -234,6 +235,9 @@ func (a *Api) GetMetricWithContext(ctx context.Context, metricId string) (Metric
 
 // PostMetricInc is like PostMetricIncWithContext using context.Background.
 func (a *Api) PostMetricInc(metricId string, value int64) error {
+	if value < 0 {
+		return fmt.Errorf("cannot send negative value %d", value)
+	}
 	return a.PostMetricIncWithContext(context.Background(), metricId, value)
 }
 
@@ -242,6 +246,9 @@ func (a *Api) PostMetricInc(metricId string, value int64) error {
 // It is an error to try to increment a non-counter metric.
 // The value is a non-negative int64 number.
 func (a *Api) PostMetricIncWithContext(ctx context.Context, metricId string, value int64) error {
+	if value < 0 {
+		return fmt.Errorf("cannot send negative value %d", value)
+	}
 	body := fmt.Sprintf("value=%d", value)
 	_, err := a.sender.Send(ctx, "POST", "metric/"+metricId+"/inc", []byte(body))
 	return err
@@ -257,7 +264,31 @@ func (a *Api) PostMetricSet(metricId string, value int64) error {
 // It is an error to try to set a non-gauge metric.
 // The value is a non-negative int64 number.
 func (a *Api) PostMetricSetWithContext(ctx context.Context, metricId string, value int64) error {
+	if value < 0 {
+		return fmt.Errorf("cannot send negative value %d", value)
+	}
 	body := fmt.Sprintf("value=%d", value)
 	_, err := a.sender.Send(ctx, "POST", "metric/"+metricId+"/set", []byte(body))
+	return err
+}
+
+// PostMetricValues is like PostMetricValuesWithContext using context.Background.
+func (a *Api) PostMetricValues(metricId string, values []int64) error {
+	return a.PostMetricValuesWithContext(context.Background(), metricId, values)
+}
+
+// PostMetricValuesWithContext uploads histogram metric values to the API.
+// It is used to set a histogram metric.
+// It is an error to try to send values to a non-histogram metric.
+// Each values must be a non-negative 64-bit integer value.
+func (a *Api) PostMetricValuesWithContext(ctx context.Context, metricId string, values []int64) error {
+	for _, value := range values {
+		if value < 0 {
+			return fmt.Errorf("cannot send negative value %d", value)
+		}
+	}
+	valuesStr := histogram.StrValues(values)
+	body := fmt.Sprintf("values=%s", url.QueryEscape(valuesStr))
+	_, err := a.sender.Send(ctx, "POST", "metric/"+metricId+"/values", []byte(body))
 	return err
 }

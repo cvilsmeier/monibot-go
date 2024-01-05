@@ -33,6 +33,10 @@ func main() {
 
 ## Changelog
 
+### v0.1.0
+
+- add histogram metric values
+
 ### v0.0.9
 
 - add machine text
