@@ -8,11 +8,8 @@ import (
 )
 
 // StringifyValues formats histogram values into a string.
-// The result is a comma-separated list of "value:count" pairs.
-// Each value is a non-negative int64 value, each count is a
-// greater or equal to 1 int.
-// If count is 1, the ":count" part is left out, so "42:1" and
-// "42" are sematically equal.
+// See ParseValues for a description of the resulting
+// string format.
 func StringifyValues(values []int64) string {
 	n := len(values)
 	if n == 0 {
@@ -53,8 +50,13 @@ func StringifyValues(values []int64) string {
 	return strings.Join(toks, ",")
 }
 
-// ParseValues parses a "value:count" comma-separated
-// list of histogram values into a slice of int64 values.
+// ParseValues parses a list of histogram values into a
+// slice of int64 values.
+// The string is a comma-separated list of "value:count" pairs.
+// Each value is a non-negative 64-bit integer value, each count
+// is an integer value greater or equal to 1.
+// If count is 1, the ":count" part is left out, so "42:1" and
+// "42" are sematically equal.
 // The resulting slice contains each value ":count" times.
 // The resulting slice is sorted in ascending order.
 func ParseValues(s string) ([]int64, error) {
