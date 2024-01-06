@@ -52,13 +52,20 @@ func StringifyValues(values []int64) string {
 
 // ParseValues parses a list of histogram values into a
 // slice of int64 values.
-// The string is a comma-separated list of "value:count" pairs.
-// Each value is a non-negative 64-bit integer value, each count
-// is an integer value greater or equal to 1.
-// If count is 1, the ":count" part is left out, so "42:1" and
-// "42" are sematically equal.
-// The resulting slice contains each value ":count" times.
-// The resulting slice is sorted in ascending order.
+//
+// The string is a comma-separated list of 'value:count' pairs.
+// Each value is a non-negative 64-bit integer value, each
+// count is an integer value greater or equal to 1.
+//
+// If count is 1, the ':count' part is optional, so
+// values '13:1,14:1' and '13,14' are sematically equal.
+//
+// A specific value may occur multiple times, its counts will
+// then be added together, so values '13:2,13:2' and '13:4'
+// are sematically equal.
+//
+// The resulting slice contains each value ":count" times and
+// is sorted in ascending order.
 func ParseValues(s string) ([]int64, error) {
 	if s == "" {
 		return nil, nil
