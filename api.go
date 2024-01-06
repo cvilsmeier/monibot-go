@@ -37,6 +37,8 @@ type apiSender interface {
 }
 
 // Api provides access to the Monibot REST API.
+// See https://monibot.io/docs/rest-api for authorization,
+// rate-limits and usage.
 type Api struct {
 	sender apiSender
 }
