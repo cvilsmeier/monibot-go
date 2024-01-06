@@ -1,6 +1,8 @@
 package histogram
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/cvilsmeier/monibot-go/internal/assert"
@@ -17,33 +19,37 @@ func TestStringifyValues(t *testing.T) {
 }
 
 func TestParseValues(t *testing.T) {
-	strErr := func(err error) string {
-		if err == nil {
-			return "nil"
+	str := func(values []int64, err error) string {
+		if err != nil {
+			return err.Error()
 		}
-		return err.Error()
+		var ss []string
+		for _, v := range values {
+			ss = append(ss, strconv.FormatInt(v, 10))
+		}
+		return strings.Join(ss, ",")
 	}
 	ass := assert.New(t)
-	mustParse := func(s string) []int64 {
-		v, err := ParseValues(s)
-		ass.Nil(err)
-		return v
-	}
-	ass.Eq("", StringifyValues(mustParse("")))
-	ass.Eq("1", StringifyValues(mustParse("1")))
-	ass.Eq("1", StringifyValues(mustParse("1:1")))
-	ass.Eq("1:2", StringifyValues(mustParse("1:2")))
-	ass.Eq("1,2,3:2", StringifyValues(mustParse("3:2,2:1,1")))
-	_, err := ParseValues("-3:2")
-	ass.Eq("cannot parse token #1 \"-3:2\": invalid value -3", strErr(err))
-	_, err = ParseValues("-3:2")
-	ass.Eq("cannot parse token #1 \"-3:2\": invalid value -3", strErr(err))
-	_, err = ParseValues("3:0")
-	ass.Eq("cannot parse token #1 \"3:0\": invalid count 0", strErr(err))
-	_, err = ParseValues("foo")
-	ass.Eq("cannot parse token #1 \"foo\": cannot parse value \"foo\": strconv.ParseInt: parsing \"foo\": invalid syntax", strErr(err))
-	_, err = ParseValues("foo:1")
-	ass.Eq("cannot parse token #1 \"foo:1\": cannot parse value \"foo\": strconv.ParseInt: parsing \"foo\": invalid syntax", strErr(err))
-	_, err = ParseValues("1:foo")
-	ass.Eq("cannot parse token #1 \"1:foo\": cannot parse count \"foo\": strconv.Atoi: parsing \"foo\": invalid syntax", strErr(err))
+	v, err := ParseValues("")
+	ass.Eq("", str(v, err))
+	v, err = ParseValues("1")
+	ass.Eq("1", str(v, err))
+	v, err = ParseValues("1:1")
+	ass.Eq("1", str(v, err))
+	v, err = ParseValues("1:2")
+	ass.Eq("1,1", str(v, err))
+	v, err = ParseValues("3:2,2:1,1")
+	ass.Eq("1,2,3,3", str(v, err))
+	v, err = ParseValues("-3:2")
+	ass.Eq("cannot parse token #1 \"-3:2\": invalid value -3", str(v, err))
+	v, err = ParseValues("-3:2")
+	ass.Eq("cannot parse token #1 \"-3:2\": invalid value -3", str(v, err))
+	v, err = ParseValues("3:0")
+	ass.Eq("cannot parse token #1 \"3:0\": invalid count 0", str(v, err))
+	v, err = ParseValues("foo")
+	ass.Eq("cannot parse token #1 \"foo\": cannot parse value \"foo\": strconv.ParseInt: parsing \"foo\": invalid syntax", str(v, err))
+	v, err = ParseValues("foo:1")
+	ass.Eq("cannot parse token #1 \"foo:1\": cannot parse value \"foo\": strconv.ParseInt: parsing \"foo\": invalid syntax", str(v, err))
+	v, err = ParseValues("1:foo")
+	ass.Eq("cannot parse token #1 \"1:foo\": cannot parse count \"foo\": strconv.Atoi: parsing \"foo\": invalid syntax", str(v, err))
 }

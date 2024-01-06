@@ -7,7 +7,12 @@ import (
 	"strings"
 )
 
-// StringifyValues turns
+// StringifyValues formats histogram values into a string.
+// The result is a comma-separated list of "value:count" pairs.
+// Each value is a non-negative int64 value, each count is a
+// greater or equal to 1 int.
+// If count is 1, the ":count" part is left out, so "42:1" and
+// "42" are sematically equal.
 func StringifyValues(values []int64) string {
 	n := len(values)
 	if n == 0 {
@@ -48,6 +53,10 @@ func StringifyValues(values []int64) string {
 	return strings.Join(toks, ",")
 }
 
+// ParseValues parses a "value:count" comma-separated
+// list of histogram values into a slice of int64 values.
+// The resulting slice contains each value ":count" times.
+// The resulting slice is sorted in ascending order.
 func ParseValues(s string) ([]int64, error) {
 	if s == "" {
 		return nil, nil
@@ -55,7 +64,7 @@ func ParseValues(s string) ([]int64, error) {
 	var values []int64
 	toks := strings.Split(s, ",")
 	for itok, tok := range toks {
-		v, c, err := parseValue(tok)
+		v, c, err := parseValueAndCount(tok)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse token #%d %q: %w", itok+1, tok, err)
 		}
@@ -70,7 +79,7 @@ func ParseValues(s string) ([]int64, error) {
 	return values, nil
 }
 
-func parseValue(s string) (int64, int, error) {
+func parseValueAndCount(s string) (int64, int, error) {
 	parts := strings.Split(s, ":")
 	np := len(parts)
 	if np < 1 || 2 < np {
