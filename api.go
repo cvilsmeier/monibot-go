@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cvilsmeier/monibot-go/internal/histogram"
+	"github.com/cvilsmeier/monibot-go/histogram"
 	"github.com/cvilsmeier/monibot-go/internal/sending"
 )
 
@@ -289,7 +289,7 @@ func (a *Api) PostMetricValuesWithContext(ctx context.Context, metricId string, 
 			return fmt.Errorf("cannot send negative value %d", value)
 		}
 	}
-	valuesStr := histogram.StrValues(values)
+	valuesStr := histogram.StringifyValues(values)
 	body := fmt.Sprintf("values=%s", url.QueryEscape(valuesStr))
 	_, err := a.sender.Send(ctx, "POST", "metric/"+metricId+"/values", []byte(body))
 	return err

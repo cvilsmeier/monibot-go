@@ -33,6 +33,10 @@ func main() {
 
 ## Changelog
 
+### v0.1.1
+
+- add histogram values functions
+
 ### v0.1.0
 
 - add histogram metric values

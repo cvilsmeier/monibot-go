@@ -52,15 +52,7 @@ type MachineSample struct {
 
 // Metric holds data for a Metric.
 type Metric struct {
-	Id   string     `json:"id"`
-	Name string     `json:"name"`
-	Type MetricType `json:"type"` // TypeCounter or TypeGauge
+	Id   string `json:"id"`
+	Name string `json:"name"`
+	Type int    `json:"type"` // 0=Counter, 1=Gauge, 2=Histogram
 }
-
-// MetricType is the type of a metric. Currently we have 0 (Counter) and 1 (Gauge).
-type MetricType int
-
-const (
-	TypeCounter MetricType = 0 // Counter Metric (type 0)
-	TypeGauge   MetricType = 1 // Gauge Metric (type 1)
-)
