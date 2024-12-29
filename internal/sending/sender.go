@@ -2,6 +2,7 @@ package sending
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -49,7 +50,7 @@ func (s *Sender) Send(ctx context.Context, method, path string, body []byte) ([]
 				if len(data) > 0 {
 					msg += ": " + string(data)
 				}
-				err = fmt.Errorf(msg)
+				err = errors.New(msg)
 			}
 			return data, err
 		}
