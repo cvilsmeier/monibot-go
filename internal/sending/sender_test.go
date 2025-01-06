@@ -21,7 +21,7 @@ func TestRetrySender(t *testing.T) {
 	delay := 2 * time.Second
 	sender := NewSender(transport, logger, trials, delay, timeAfter)
 	// must retry if network error
-	transport.responses = []fakeResponse{
+	transport.responses = []fakeTransportResponse{
 		{0, nil, fmt.Errorf("connection refused")},
 		{0, nil, fmt.Errorf("connection refused")},
 		{200, []byte("{\"ok\":true}"), nil},
@@ -39,7 +39,7 @@ func TestRetrySender(t *testing.T) {
 	ass.Eq("{\"ok\":true}", string(data))
 	transport.calls = nil
 	// must retry max trials
-	transport.responses = []fakeResponse{
+	transport.responses = []fakeTransportResponse{
 		{0, nil, fmt.Errorf("connection error 1")},
 		{0, nil, fmt.Errorf("connection error 2")},
 		{0, nil, fmt.Errorf("connection error 3")},
@@ -56,7 +56,7 @@ func TestRetrySender(t *testing.T) {
 	ass.Eq("connection error 3", err.Error())
 	transport.calls = nil
 	// must retry if status 502 (bad gateway)
-	transport.responses = []fakeResponse{
+	transport.responses = []fakeTransportResponse{
 		{502, nil, nil},
 		{502, nil, nil},
 		{200, []byte("{\"ok\":true}"), nil},
@@ -74,7 +74,7 @@ func TestRetrySender(t *testing.T) {
 	ass.Eq("{\"ok\":true}", string(data))
 	transport.calls = nil
 	// must not retry if authorization error
-	transport.responses = []fakeResponse{
+	transport.responses = []fakeTransportResponse{
 		{401, []byte("401 - Unauthorized (invalid apiKey)"), nil},
 	}
 	_, err = sender.Send(context.Background(), "GET", "/ping", nil)
@@ -83,7 +83,7 @@ func TestRetrySender(t *testing.T) {
 	ass.Eq("status 401: 401 - Unauthorized (invalid apiKey)", err.Error())
 	transport.calls = nil
 	// must not retry if 404 (not found) but give error
-	transport.responses = []fakeResponse{
+	transport.responses = []fakeTransportResponse{
 		{404, nil, nil},
 	}
 	_, err = sender.Send(context.Background(), "GET", "/wrongUrl", nil)
@@ -91,4 +91,42 @@ func TestRetrySender(t *testing.T) {
 	ass.Eq("GET /wrongUrl", transport.calls[0])
 	ass.Eq("status 404", err.Error())
 	transport.calls = nil
+}
+
+// fakeTransport is a Transport for unit tests
+type fakeTransport struct {
+	calls     []string
+	responses []fakeTransportResponse
+}
+
+func (f *fakeTransport) Send(ctx context.Context, method, path string, body []byte) (int, []byte, error) {
+	call := fmt.Sprintf("%s %s", method, path)
+	if len(body) > 0 {
+		call += fmt.Sprintf(" %s", string(body))
+	}
+	f.calls = append(f.calls, call)
+	if len(f.responses) == 0 {
+		return 0, nil, fmt.Errorf("fakeSender is out of responses for request %s %s", method, path)
+	}
+	re := f.responses[0]
+	f.responses = f.responses[1:]
+	return re.status, re.data, re.err
+}
+
+type fakeTransportResponse struct {
+	status int
+	data   []byte
+	err    error
+}
+
+// fakeLogger is a Logger for unit tests
+type fakeLogger struct {
+	t       testing.TB
+	enabled bool
+}
+
+func (f *fakeLogger) Debug(format string, args ...any) {
+	if f.enabled {
+		f.t.Logf(format, args...)
+	}
 }

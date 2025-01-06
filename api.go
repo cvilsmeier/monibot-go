@@ -27,7 +27,7 @@ type ApiOptions struct {
 	// Default is 5s delay.
 	Delay time.Duration
 
-	// Default is time.After (this is only used in tests and hence not exported).
+	// Default is time.After (this is only used in tests and therefore not exported).
 	timeAfter sending.TimeAfterFunc
 }
 

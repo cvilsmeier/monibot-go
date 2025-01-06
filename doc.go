@@ -10,9 +10,9 @@ see https://monibot.io for details.
 		// create new api
 		api := monibot.NewApi(apiKey)
 		// send a watchdog heartbeat
-		api.PostWatchdogHeartbeat("5f6d343a471d87687f51771530c3f2f4")
-		// increment a counter metric
-		api.PostMetricInc("c3f2fefae7f6d3e387f1d8761ff17730", 42)
+		api.PostWatchdogHeartbeat("a749ff35891ecb36")
+		// increment a counter metric by 42
+		api.PostMetricInc("ffe31498bc7193a4", 42)
 	}
 */
 package monibot

@@ -29,6 +29,6 @@ func (a *Assert) Nil(have any) {
 func (a *Assert) Eq(want, have any) {
 	a.t.Helper()
 	if want != have {
-		a.t.Fatalf("want %T(%v) but have %T(%v)", want, want, have, have)
+		a.t.Fatalf("\nwant %T(%v)\nhave %T(%v)", want, want, have, have)
 	}
 }
