@@ -34,7 +34,7 @@ func (s *Transport) Send(ctx context.Context, method, path string, body []byte) 
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-	req.Header.Set("User-Agent", "monibot/"+s.version)
+	req.Header.Set("User-Agent", "monibot-go/"+s.version)
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
@@ -47,10 +47,10 @@ func (s *Transport) Send(ctx context.Context, method, path string, body []byte) 
 	if err != nil {
 		return 0, nil, fmt.Errorf("cannot read response data: %w", err)
 	}
+	responseText := string(data)
 	if len(data) > 256 {
-		s.logger.Debug("%d (%d bytes) %s", resp.StatusCode, len(data), string(data)[:256]+"...")
-	} else {
-		s.logger.Debug("%d (%d bytes) %s", resp.StatusCode, len(data), string(data))
+		responseText = responseText[:256] + "..."
 	}
+	s.logger.Debug("%d (%d bytes) %s", resp.StatusCode, len(data), responseText)
 	return resp.StatusCode, data, nil
 }

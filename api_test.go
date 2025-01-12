@@ -118,15 +118,15 @@ func TestApi(t *testing.T) {
 			CpuPercent:  12,
 			MemPercent:  34,
 			DiskPercent: 12,
-			DiskReads:   678,
-			DiskWrites:  567,
+			DiskRead:    678,
+			DiskWrite:   567,
 			NetRecv:     13,
 			NetSend:     14,
 		}
 		err := api.PostMachineSample("00000001", sample)
 		ass.Nil(err)
 		ass.Eq(1, len(sender.calls))
-		ass.Eq("POST machine/00000001/sample tstamp=1698400800000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12&diskReads=678&diskWrites=567&netRecv=13&netSend=14", sender.calls[0])
+		ass.Eq("POST machine/00000001/sample tstamp=1698400800000&load1=1.010&load5=0.780&load15=0.120&cpu=12&mem=34&disk=12&diskRead=678&diskWrite=567&netRecv=13&netSend=14", sender.calls[0])
 		ass.Eq(0, len(sender.responses))
 	}
 	// POST machine/00000001/text

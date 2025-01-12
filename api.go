@@ -24,7 +24,7 @@ type ApiOptions struct {
 	// Default is 12 trials.
 	Trials int
 
-	// Default is 5s delay.
+	// Default is 5s delay between trials.
 	Delay time.Duration
 
 	// Default is time.After (this is only used in tests and therefore not exported).
@@ -181,8 +181,8 @@ func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string
 		fmt.Sprintf("cpu=%d", sample.CpuPercent),
 		fmt.Sprintf("mem=%d", sample.MemPercent),
 		fmt.Sprintf("disk=%d", sample.DiskPercent),
-		fmt.Sprintf("diskReads=%d", sample.DiskReads),
-		fmt.Sprintf("diskWrites=%d", sample.DiskWrites),
+		fmt.Sprintf("diskRead=%d", sample.DiskRead),
+		fmt.Sprintf("diskWrite=%d", sample.DiskWrite),
 		fmt.Sprintf("netRecv=%d", sample.NetRecv),
 		fmt.Sprintf("netSend=%d", sample.NetSend),
 	}

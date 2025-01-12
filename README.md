@@ -1,19 +1,19 @@
 # monibot-go
 
 [![GoDoc Reference](https://godoc.org/github.com/cvilsmeier/monibot-go?status.svg)](http://godoc.org/github.com/cvilsmeier/monibot-go)
-[![Build Status](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml)
+[![Build Status](https://github.com/cvilsmeier/monibot-go/actions/workflows/go-linux.yml/badge.svg)](https://github.com/cvilsmeier/monibot-go/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Golang SDK for https://monibot.io - Easy Server and Application Monitoring.
+Golang SDK for https://monibot.io - Website-, Server- and Application Monitoring.
 
 This module provides a SDK to interact with the Monibot REST API.
 Monibot is a service that monitors your web apps, servers and
-metrics, and notifies you if something goes wrong.
+application metrics, and notifies you if something goes wrong.
 
 
 ## Usage
 
-    $ go get github.com/cvilsmeier/monibot-go
+    go get github.com/cvilsmeier/monibot-go
 
 ```go
 import "github.com/cvilsmeier/monibot-go"
@@ -32,6 +32,10 @@ func main() {
 
 
 ## Changelog
+
+### v0.2.0
+
+- replace MachineSample DiskReads/Writes (number of sectors) with DiskRead/Write (number of bytes)
 
 ### v0.1.1
 
