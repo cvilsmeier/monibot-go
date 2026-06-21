@@ -10,7 +10,7 @@ import (
 )
 
 func TestRetrySender(t *testing.T) {
-	ass := assert.New(t)
+	is := assert.New(t)
 	transport := &fakeTransport{}
 	timeChan := make(chan time.Time)
 	logger := &fakeLogger{t, false}
@@ -31,12 +31,12 @@ func TestRetrySender(t *testing.T) {
 		timeChan <- time.Now()
 	}()
 	data, err := sender.Send(context.Background(), "GET", "/ping", nil)
-	ass.Eq(3, len(transport.calls))
-	ass.Eq("GET /ping", transport.calls[0])
-	ass.Eq("GET /ping", transport.calls[1])
-	ass.Eq("GET /ping", transport.calls[2])
-	ass.Nil(err)
-	ass.Eq("{\"ok\":true}", string(data))
+	is.Eq(3, len(transport.calls))
+	is.Eq("GET /ping", transport.calls[0])
+	is.Eq("GET /ping", transport.calls[1])
+	is.Eq("GET /ping", transport.calls[2])
+	is.Nil(err)
+	is.Eq("{\"ok\":true}", string(data))
 	transport.calls = nil
 	// must retry max trials
 	transport.responses = []fakeTransportResponse{
@@ -49,11 +49,11 @@ func TestRetrySender(t *testing.T) {
 		timeChan <- time.Now()
 	}()
 	_, err = sender.Send(context.Background(), "GET", "/ping", nil)
-	ass.Eq(3, len(transport.calls))
-	ass.Eq("GET /ping", transport.calls[0])
-	ass.Eq("GET /ping", transport.calls[1])
-	ass.Eq("GET /ping", transport.calls[2])
-	ass.Eq("connection error 3", err.Error())
+	is.Eq(3, len(transport.calls))
+	is.Eq("GET /ping", transport.calls[0])
+	is.Eq("GET /ping", transport.calls[1])
+	is.Eq("GET /ping", transport.calls[2])
+	is.Eq("connection error 3", err.Error())
 	transport.calls = nil
 	// must retry if status 502 (bad gateway)
 	transport.responses = []fakeTransportResponse{
@@ -66,30 +66,30 @@ func TestRetrySender(t *testing.T) {
 		timeChan <- time.Now()
 	}()
 	data, err = sender.Send(context.Background(), "GET", "/ping", nil)
-	ass.Eq(3, len(transport.calls))
-	ass.Eq("GET /ping", transport.calls[0])
-	ass.Eq("GET /ping", transport.calls[1])
-	ass.Eq("GET /ping", transport.calls[2])
-	ass.Nil(err)
-	ass.Eq("{\"ok\":true}", string(data))
+	is.Eq(3, len(transport.calls))
+	is.Eq("GET /ping", transport.calls[0])
+	is.Eq("GET /ping", transport.calls[1])
+	is.Eq("GET /ping", transport.calls[2])
+	is.Nil(err)
+	is.Eq("{\"ok\":true}", string(data))
 	transport.calls = nil
 	// must not retry if authorization error
 	transport.responses = []fakeTransportResponse{
 		{401, []byte("401 - Unauthorized (invalid apiKey)"), nil},
 	}
 	_, err = sender.Send(context.Background(), "GET", "/ping", nil)
-	ass.Eq(1, len(transport.calls))
-	ass.Eq("GET /ping", transport.calls[0])
-	ass.Eq("status 401: 401 - Unauthorized (invalid apiKey)", err.Error())
+	is.Eq(1, len(transport.calls))
+	is.Eq("GET /ping", transport.calls[0])
+	is.Eq("status 401: 401 - Unauthorized (invalid apiKey)", err.Error())
 	transport.calls = nil
 	// must not retry if 404 (not found) but give error
 	transport.responses = []fakeTransportResponse{
 		{404, nil, nil},
 	}
 	_, err = sender.Send(context.Background(), "GET", "/wrongUrl", nil)
-	ass.Eq(1, len(transport.calls))
-	ass.Eq("GET /wrongUrl", transport.calls[0])
-	ass.Eq("status 404", err.Error())
+	is.Eq(1, len(transport.calls))
+	is.Eq("GET /wrongUrl", transport.calls[0])
+	is.Eq("status 404", err.Error())
 	transport.calls = nil
 }
 

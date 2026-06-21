@@ -173,19 +173,51 @@ func (a *Api) PostMachineSample(machineId string, sample MachineSample) error {
 
 // PostMachineSampleWithContext uploads a machine sample to the API.
 func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string, sample MachineSample) error {
-	toks := []string{
+	toks := make([]string, 0, 15+len(sample.Disks)*10) // 15 for machine, 10 for each disk sample
+	toks = append(toks,
 		fmt.Sprintf("tstamp=%d", sample.Tstamp),
 		fmt.Sprintf("load1=%.3f", sample.Load1),
 		fmt.Sprintf("load5=%.3f", sample.Load5),
 		fmt.Sprintf("load15=%.3f", sample.Load15),
 		fmt.Sprintf("cpu=%d", sample.CpuPercent),
 		fmt.Sprintf("mem=%d", sample.MemPercent),
+	)
+	if len(sample.Disks) > 0 {
+		toks = append(toks,
+			fmt.Sprintf("disks=%d", len(sample.Disks)), // number of disks, default is 0
+		)
+		for i, disk := range sample.Disks {
+			toks = append(toks,
+				fmt.Sprintf("disks[%d].device=%s", i, disk.Device),
+				fmt.Sprintf("disks[%d].total=%d", i, disk.Total),
+				fmt.Sprintf("disks[%d].used=%d", i, disk.Used),
+				fmt.Sprintf("disks[%d].usedPercent=%d", i, disk.UsedPercent),
+				fmt.Sprintf("disks[%d].readBytes=%d", i, disk.ReadBytes),
+				fmt.Sprintf("disks[%d].writeBytes=%d", i, disk.WriteBytes),
+			)
+		}
+	}
+	toks = append(toks,
 		fmt.Sprintf("disk=%d", sample.DiskPercent),
 		fmt.Sprintf("diskRead=%d", sample.DiskRead),
 		fmt.Sprintf("diskWrite=%d", sample.DiskWrite),
+	)
+	if len(sample.Nets) > 0 {
+		toks = append(toks,
+			fmt.Sprintf("nets=%d", len(sample.Nets)), // number of nets, default is 0
+		)
+		for i, net := range sample.Nets {
+			toks = append(toks,
+				fmt.Sprintf("nets[%d].device=%s", i, net.Device),
+				fmt.Sprintf("nets[%d].recvBytes=%d", i, net.RecvBytes),
+				fmt.Sprintf("nets[%d].sendBytes=%d", i, net.SendBytes),
+			)
+		}
+	}
+	toks = append(toks,
 		fmt.Sprintf("netRecv=%d", sample.NetRecv),
 		fmt.Sprintf("netSend=%d", sample.NetSend),
-	}
+	)
 	body := strings.Join(toks, "&")
 	_, err := a.sender.Send(ctx, "POST", "machine/"+machineId+"/sample", []byte(body))
 	return err

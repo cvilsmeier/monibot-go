@@ -33,6 +33,10 @@ func main() {
 
 ## Changelog
 
+### v0.3.0
+
+- add DiskSamples and NetSamples to MachineSample
+
 ### v0.2.0
 
 - replace MachineSample DiskReads/Writes (number of sectors) with DiskRead/Write (number of bytes)

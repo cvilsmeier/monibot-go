@@ -11,7 +11,7 @@ import (
 )
 
 func TestSender(t *testing.T) {
-	ass := assert.New(t)
+	is := assert.New(t)
 	// setup fake api http server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/ok", func(w http.ResponseWriter, r *http.Request) {
@@ -27,14 +27,14 @@ func TestSender(t *testing.T) {
 	sender := NewTransport(logger, "v1.2.3", server.URL, "api-key-123")
 	// send ok
 	status, data, err := sender.Send(context.Background(), "GET", "/ok", nil)
-	ass.Nil(err)
-	ass.Eq(200, status)
-	ass.Eq("ok", string(data))
+	is.Nil(err)
+	is.Eq(200, status)
+	is.Eq("ok", string(data))
 	// send 500
 	status, data, err = sender.Send(context.Background(), "POST", "/500", nil)
-	ass.Nil(err)
-	ass.Eq(500, status)
-	ass.Eq("", string(data))
+	is.Nil(err)
+	is.Eq(500, status)
+	is.Eq("", string(data))
 }
 
 type fakeSenderLogger struct{}
