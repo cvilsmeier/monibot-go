@@ -2,6 +2,7 @@ package histogram
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,11 +19,12 @@ func StringifyValues(values []int64) string {
 	if n == 1 {
 		return strconv.FormatInt(values[0], 10)
 	}
-	tmp := append([]int64(nil), values...)
-	// cannot use slices.Sort() because we support go 1.20
-	sort.Slice(tmp, func(i, j int) bool {
-		return tmp[i] < tmp[j]
-	})
+	// values must be sorted
+	if !slices.IsSorted(values) {
+		// we clone values[] because we must not modify the slice by sorting it in-place
+		values = slices.Clone(values)
+		slices.Sort(values)
+	}
 	add := func(toks []string, v int64, c int) []string {
 		if c == 1 {
 			toks = append(toks, strconv.FormatInt(v, 10))
@@ -32,10 +34,10 @@ func StringifyValues(values []int64) string {
 		return toks
 	}
 	var toks []string
-	value := tmp[0]
+	value := values[0]
 	count := 1
 	for i := 1; i < n; i++ {
-		next := tmp[i]
+		next := values[i]
 		if next == value {
 			count++
 		} else {

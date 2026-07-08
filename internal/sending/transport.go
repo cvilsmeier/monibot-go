@@ -9,14 +9,14 @@ import (
 )
 
 type Transport struct {
-	logger  debugLogger
-	version string
-	apiUrl  string
-	apiKey  string
+	logger    debugLogger
+	apiUrl    string
+	apiKey    string
+	userAgent string
 }
 
-func NewTransport(logger debugLogger, version, monibotUrl, apiKey string) *Transport {
-	return &Transport{logger, version, monibotUrl + "/api/", apiKey}
+func NewTransport(logger debugLogger, monibotUrl, apiKey, userAgent string) *Transport {
+	return &Transport{logger, monibotUrl + "/api/", apiKey, userAgent}
 }
 
 func (s *Transport) Send(ctx context.Context, method, path string, body []byte) (int, []byte, error) {
@@ -34,7 +34,7 @@ func (s *Transport) Send(ctx context.Context, method, path string, body []byte) 
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-	req.Header.Set("User-Agent", "monibot-go/"+s.version)
+	req.Header.Set("User-Agent", s.userAgent)
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)

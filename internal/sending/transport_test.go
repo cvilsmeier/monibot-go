@@ -24,7 +24,7 @@ func TestSender(t *testing.T) {
 	defer server.Close()
 	// init
 	logger := &fakeSenderLogger{}
-	sender := NewTransport(logger, "v1.2.3", server.URL, "api-key-123")
+	sender := NewTransport(logger, server.URL, "api-key-123", "0.2.3")
 	// send ok
 	status, data, err := sender.Send(context.Background(), "GET", "/ok", nil)
 	is.Nil(err)

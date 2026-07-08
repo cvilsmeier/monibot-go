@@ -33,6 +33,7 @@ type MachineSample struct {
 // A DiskSample is part of a MachineSample.
 type DiskSample struct {
 	Device      string // Disk device, e.g. "/dev/sda1"
+	Mountpoint  string // Mount point, e.g. "/mnt/HC_Volume_102242198"
 	Total       int64  // Total size in bytes, 0..MAX_I64
 	Used        int64  // Used size in bytes, 0..MAX_I64
 	UsedPercent int    // Usage in percent, 0..100

@@ -1,6 +1,7 @@
 package monibot
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,14 +19,23 @@ type ApiOptions struct {
 	// Default is no logging. If you want debug logging: Bring your own logger.
 	Logger Logger
 
+	// MonibotUrl is the base url to send api calls to.
 	// Default is "https://monibot.io".
 	MonibotUrl string
 
+	// If an endpoint is not reachable, the api will try again,
+	// until it succeeds or the maximum number of trial is reached.
 	// Default is 12 trials.
 	Trials int
 
+	// The time to wait between trials.
 	// Default is 5s delay between trials.
 	Delay time.Duration
+
+	// The "User-Agent" header value. The placeholder $sdkVersion, if present,
+	// is substituted by the monibot-go sdk version.
+	// Default is "$sdkVersion".
+	UserAgent string
 
 	// Default is time.After (this is only used in tests and therefore not exported).
 	timeAfter sending.TimeAfterFunc
@@ -51,28 +61,21 @@ func NewApi(apiKey string) *Api {
 }
 
 // NewApiWithOptions creates an Api with custom options.
-func NewApiWithOptions(apiKey string, opt ApiOptions) *Api {
-	logger := opt.Logger
+func NewApiWithOptions(apiKey string, options ApiOptions) *Api {
+	logger := options.Logger
 	if logger == nil {
 		logger = zeroLogger{}
 	}
-	monibotUrl := opt.MonibotUrl
-	if monibotUrl == "" {
-		monibotUrl = "http://monibot.io"
-	}
-	trials := opt.Trials
-	if trials == 0 {
-		trials = 12
-	}
-	delay := opt.Delay
-	if delay == 0 {
-		delay = 5 * time.Second
-	}
-	timeAfter := opt.timeAfter
+	monibotUrl := cmp.Or(options.MonibotUrl, "http://monibot.io")
+	trials := cmp.Or(options.Trials, 12)
+	delay := cmp.Or(options.Delay, 5*time.Second)
+	timeAfter := options.timeAfter
 	if timeAfter == nil {
 		timeAfter = time.After
 	}
-	transport := sending.NewTransport(logger, Version, monibotUrl, apiKey)
+	userAgent := cmp.Or(options.UserAgent, "$sdkVersion")
+	userAgent = strings.ReplaceAll(userAgent, "$sdkVersion", "monibot-go/"+Version)
+	transport := sending.NewTransport(logger, monibotUrl, apiKey, userAgent)
 	sender := sending.NewSender(transport, logger, trials, delay, timeAfter)
 	return &Api{sender}
 }
@@ -188,7 +191,8 @@ func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string
 		)
 		for i, disk := range sample.Disks {
 			toks = append(toks,
-				fmt.Sprintf("disks[%d].device=%s", i, disk.Device),
+				fmt.Sprintf("disks[%d].device=%s", i, url.QueryEscape(disk.Device)),
+				fmt.Sprintf("disks[%d].mountpoint=%s", i, url.QueryEscape(disk.Mountpoint)),
 				fmt.Sprintf("disks[%d].total=%d", i, disk.Total),
 				fmt.Sprintf("disks[%d].used=%d", i, disk.Used),
 				fmt.Sprintf("disks[%d].usedPercent=%d", i, disk.UsedPercent),
@@ -208,7 +212,7 @@ func (a *Api) PostMachineSampleWithContext(ctx context.Context, machineId string
 		)
 		for i, net := range sample.Nets {
 			toks = append(toks,
-				fmt.Sprintf("nets[%d].device=%s", i, net.Device),
+				fmt.Sprintf("nets[%d].device=%s", i, url.QueryEscape(net.Device)),
 				fmt.Sprintf("nets[%d].recvBytes=%d", i, net.RecvBytes),
 				fmt.Sprintf("nets[%d].sendBytes=%d", i, net.SendBytes),
 			)

@@ -19,10 +19,10 @@ func checkVersion() {
 	// README.md
 	readmeVersion := cutout(readFile("README.md"), "### v", "\n")
 	// version.go
-	versionVersion := cutout(readFile("version.go"), "\"v", "\"")
+	versionVersion := cutout(readFile("version.go"), "\"", "\"")
 	if readmeVersion != versionVersion {
-		log.Print("README.md                   ", readmeVersion)
-		log.Print("internal/version/version.go ", versionVersion)
+		log.Print("README.md   ", readmeVersion)
+		log.Print("version.go  ", versionVersion)
 		log.Fatal("version mismatch")
 	}
 }

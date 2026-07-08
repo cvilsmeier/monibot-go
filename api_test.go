@@ -152,6 +152,7 @@ func TestApi(t *testing.T) {
 			Disks: []DiskSample{
 				{
 					Device:      "/dev/sda",
+					Mountpoint:  "/home",
 					Total:       21,
 					Used:        22,
 					UsedPercent: 23,
@@ -160,11 +161,12 @@ func TestApi(t *testing.T) {
 				},
 				{
 					Device:      "/dev/sdb", // string // e.g. "/dev/sda1" // from disk.Partitions()
-					Total:       31,         // int64  // 0..MAX_I64       // from disk.Usage()
-					Used:        32,         // int64  // 0..MAX_I64       // from disk.Usage()
-					UsedPercent: 33,         // int    // 0..100           // from disk.Usage()
-					ReadBytes:   34,         // int64  // 0..MAX_I64       // from disk.IOCounters()
-					WriteBytes:  35,         // int64  // 0..MAX_I64       // from disk.IOCounters()
+					Mountpoint:  "/mnt/HC 1313&a",
+					Total:       31, // int64  // 0..MAX_I64       // from disk.Usage()
+					Used:        32, // int64  // 0..MAX_I64       // from disk.Usage()
+					UsedPercent: 33, // int    // 0..100           // from disk.Usage()
+					ReadBytes:   34, // int64  // 0..MAX_I64       // from disk.IOCounters()
+					WriteBytes:  35, // int64  // 0..MAX_I64       // from disk.IOCounters()
 				},
 			},
 			DiskPercent: 12,
@@ -172,7 +174,7 @@ func TestApi(t *testing.T) {
 			DiskWrite:   567,
 			Nets: []NetSample{
 				{
-					Device:    "eth0",
+					Device:    "eth=&0",
 					RecvBytes: 24,
 					SendBytes: 25,
 				},
@@ -189,17 +191,21 @@ func TestApi(t *testing.T) {
 		is.Nil(err)
 		is.Eq(1, len(sender.calls))
 		is.Eq("POST machine/00000001/sample tstamp=1698400800000"+
-			"&load1=1.010&load5=0.780&load15=0.120"+
+			"&load1=1.010"+
+			"&load5=0.780"+
+			"&load15=0.120"+
 			"&cpu=12"+
 			"&mem=34"+
 			"&disks=2"+
-			"&disks[0].device=/dev/sda"+
+			"&disks[0].device=%2Fdev%2Fsda"+
+			"&disks[0].mountpoint=%2Fhome"+
 			"&disks[0].total=21"+
 			"&disks[0].used=22"+
 			"&disks[0].usedPercent=23"+
 			"&disks[0].readBytes=24"+
 			"&disks[0].writeBytes=25"+
-			"&disks[1].device=/dev/sdb"+
+			"&disks[1].device=%2Fdev%2Fsdb"+
+			"&disks[1].mountpoint=%2Fmnt%2FHC+1313%26a"+
 			"&disks[1].total=31"+
 			"&disks[1].used=32"+
 			"&disks[1].usedPercent=33"+
@@ -209,7 +215,7 @@ func TestApi(t *testing.T) {
 			"&diskRead=678"+
 			"&diskWrite=567"+
 			"&nets=2"+
-			"&nets[0].device=eth0"+
+			"&nets[0].device=eth%3D%260"+
 			"&nets[0].recvBytes=24"+
 			"&nets[0].sendBytes=25"+
 			"&nets[1].device=eth1"+
