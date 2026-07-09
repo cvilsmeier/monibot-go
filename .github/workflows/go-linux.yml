@@ -1,26 +1,18 @@
 name: go-linux
-
 on: [push]
-
 jobs:
-
   build:
     runs-on: ubuntu-latest
-    
     strategy:
       matrix:
-        go-version: ['1.21', '1.22', '1.23']
-
+        go-version: ['1.23', '1.24', '1.25', '1.26']   # last 4 versions
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v7
       - name: setup go ${{matrix.go-version}}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{matrix.go-version}}
-      
       - name: go version
         run: go version
-      
       - name: go test
         run: go test ./...
